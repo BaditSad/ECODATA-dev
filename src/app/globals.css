@@ -1,0 +1,270 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  BioTwin — production core.
+
+  Two registers, one palette:
+
+  • Console (`/admin`, `/hotel-portal`) — dense, technical, dark. Colour is
+    routed through `--bt-*` tokens carried over from the demo repo's management
+    console, so both products read as one system. Emerald is a state accent,
+    never decoration.
+
+  • Guest & lobby (`/client`, `/lobby`) — the luxury register: deep canopy
+    surfaces, brass hairlines, generous type. These views sit over a 3D twin,
+    so chrome is thin glass rather than opaque panels.
+*/
+
+:root {
+  /* ── Console tokens (dark, the only console theme) ───────────────────── */
+  --bt-bg: #0b0f17;
+  --bt-card: #1e293b;
+  --bt-card-40: rgba(30, 41, 59, 0.45);
+  --bt-soft: #131a26;
+  --bt-border: #1e293b;
+  --bt-border-strong: #334155;
+
+  --bt-emerald: #10b981;
+  --bt-emerald-10: rgba(16, 185, 129, 0.1);
+  --bt-emerald-15: rgba(16, 185, 129, 0.15);
+  --bt-emerald-30: rgba(16, 185, 129, 0.3);
+  --bt-emerald-50: rgba(16, 185, 129, 0.5);
+
+  --bt-gold: #f59e0b;
+  --bt-gold-10: rgba(245, 158, 11, 0.1);
+  --bt-gold-40: rgba(245, 158, 11, 0.4);
+
+  --bt-danger: #f87171;
+  --bt-danger-10: rgba(248, 113, 113, 0.14);
+  --bt-danger-30: rgba(248, 113, 113, 0.38);
+
+  --bt-muted: #94a3b8;
+  --bt-text: #ffffff;
+  --bt-text-soft: #e2e8f0;
+  --bt-ring: #0b0f17;
+  --bt-knob: #ffffff;
+  --bt-overlay: rgba(11, 15, 23, 0.85);
+
+  /* ── Guest / lobby glass ─────────────────────────────────────────────── */
+  --hud-r-sm: 8px;
+  --hud-r: 10px;
+  --hud-r-lg: 14px;
+  --hud-line: rgba(245, 240, 232, 0.13);
+  --hud-line-strong: rgba(245, 240, 232, 0.2);
+  --hud-veil: rgba(5, 13, 10, 0.6);
+  --hud-veil-strong: rgba(5, 13, 10, 0.82);
+  --hud-card: rgba(5, 13, 10, 0.94);
+  --hud-fill: rgba(245, 240, 232, 0.04);
+  --hud-accent-soft: rgba(196, 165, 116, 0.14);
+  --hud-accent-line: rgba(196, 165, 116, 0.32);
+  --hud-shadow: 0 10px 30px -18px rgb(0 0 0 / 0.7);
+  --hud-shadow-modal: 0 30px 80px -40px rgb(0 0 0 / 0.85);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-canopy-950 text-sand-100 antialiased;
+    letter-spacing: -0.011em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  button,
+  a,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+
+  /* Numeric telemetry must not jitter as digits change. */
+  .tabular,
+  [data-tabular] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    @apply bg-moss-400/30 text-sand-100;
+  }
+
+  /* Honour a reduced-motion preference. The lobby kiosk in particular runs
+     ambient loops that are unwelcome for motion-sensitive viewers. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* ── Console shell ───────────────────────────────────────────────────── */
+  .console-root {
+    background: var(--bt-bg);
+    color: var(--bt-text);
+  }
+
+  .console-card {
+    @apply rounded-lg border;
+    border-color: var(--bt-border);
+    background: var(--bt-card-40);
+  }
+
+  .console-input {
+    @apply w-full rounded-md border px-2.5 font-sans text-[12px] leading-relaxed outline-none transition-colors;
+    border-color: var(--bt-border-strong);
+    background: var(--bt-soft);
+    color: var(--bt-text);
+  }
+
+  .console-input::placeholder {
+    color: var(--bt-muted);
+  }
+
+  .console-input:focus {
+    border-color: var(--bt-emerald);
+  }
+
+  /* Sole emerald fill in the interface: one primary action per group. */
+  .console-btn-primary {
+    @apply inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-md border border-transparent px-3 font-sans text-[12px] font-medium transition-opacity disabled:cursor-not-allowed disabled:opacity-45;
+    background: var(--bt-emerald);
+    color: var(--bt-ring);
+  }
+
+  .console-btn-primary:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+
+  .console-btn-secondary {
+    @apply inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-md border bg-transparent px-3 font-sans text-[12px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45;
+    border-color: var(--bt-border-strong);
+    color: var(--bt-text);
+  }
+
+  .console-btn-secondary:hover:not(:disabled) {
+    background: var(--bt-soft);
+  }
+
+  .console-btn-quiet {
+    @apply inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 font-sans text-[12px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45;
+    color: var(--bt-muted);
+  }
+
+  .console-btn-quiet:hover:not(:disabled) {
+    color: var(--bt-text);
+  }
+
+  /* ── Guest / lobby glass ─────────────────────────────────────────────── */
+  .hud-surface {
+    border-radius: var(--hud-r);
+    border: 1px solid var(--hud-line);
+    background: var(--hud-veil);
+    box-shadow: var(--hud-shadow);
+    backdrop-filter: blur(16px) saturate(1.2);
+    -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  }
+
+  .hud-panel {
+    border-radius: var(--hud-r-lg);
+    border: 1px solid var(--hud-line);
+    background: var(--hud-card);
+    box-shadow: var(--hud-shadow-modal);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .hud-eyebrow {
+    font-size: 9.5px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(232, 223, 208, 0.55);
+  }
+
+  .hud-title {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.25;
+    letter-spacing: -0.012em;
+    color: #f5f0e8;
+  }
+
+  .hud-body {
+    font-size: 12px;
+    line-height: 1.45;
+    color: rgba(232, 223, 208, 0.8);
+  }
+
+  .hud-meta {
+    font-size: 10.5px;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+    color: rgba(232, 223, 208, 0.5);
+  }
+
+  /* ── PIN pad ─────────────────────────────────────────────────────────── */
+  .pin-cell {
+    @apply grid place-items-center rounded-lg border font-sans tabular-nums transition-colors;
+    height: 4.25rem;
+    width: 3.25rem;
+    border-color: var(--hud-line-strong);
+    background: var(--hud-fill);
+    font-size: 1.85rem;
+    font-weight: 300;
+    letter-spacing: 0;
+    color: #f5f0e8;
+  }
+
+  .pin-cell-active {
+    border-color: var(--hud-accent-line);
+    background: var(--hud-accent-soft);
+  }
+
+  .pin-key {
+    @apply grid place-items-center rounded-lg border font-sans transition-colors active:scale-[0.97];
+    height: 3.5rem;
+    border-color: var(--hud-line);
+    background: var(--hud-fill);
+    font-size: 1.25rem;
+    font-weight: 300;
+    color: #f5f0e8;
+  }
+
+  .pin-key:hover:not(:disabled) {
+    border-color: var(--hud-accent-line);
+    background: var(--hud-accent-soft);
+  }
+
+  .pin-key:disabled {
+    opacity: 0.35;
+  }
+
+  /* Kiosk: no cursor, no text selection, no overscroll on a wall display. */
+  .kiosk-root {
+    cursor: none;
+    user-select: none;
+    overscroll-behavior: none;
+  }
+
+  /* Applied by the kiosk layout, one level above the scene, so nothing a
+     passer-by touches can scroll or select the display out of shape. */
+  .kiosk-shell {
+    height: 100svh;
+    overflow: hidden;
+    cursor: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    overscroll-behavior: none;
+  }
+}
