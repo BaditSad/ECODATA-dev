@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
 /**
- * BioTwin production core.
+ * Eco-Data Link production core.
  *
  * Two visual registers share one palette:
  *  - Console (`/admin`, `/hotel-portal`) drives colour through the `--bt-*`

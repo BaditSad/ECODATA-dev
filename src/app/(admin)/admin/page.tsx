@@ -155,7 +155,7 @@ export default async function AdminOverviewPage() {
                   <Cell>
                     <Link
                       href={`/admin/clients/${row.tenant_id}`}
-                      className="font-medium text-[var(--bt-text)] underline-offset-2 hover:underline"
+                      className="font-medium text-[var(--edl-text)] underline-offset-2 hover:underline"
                     >
                       {row.tenant_name}
                     </Link>
@@ -187,7 +187,7 @@ export default async function AdminOverviewPage() {
                   </Cell>
 
                   <Cell align="right">
-                    <span style={stale ? { color: "var(--bt-danger)" } : undefined}>
+                    <span style={stale ? { color: "var(--edl-danger)" } : undefined}>
                       {formatRelative(row.last_ping, now)}
                     </span>
                   </Cell>

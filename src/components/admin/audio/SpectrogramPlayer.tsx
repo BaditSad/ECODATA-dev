@@ -262,9 +262,9 @@ export function SpectrogramPlayer({ clip }: { clip: SpectrogramClip | null }) {
   if (!clip) {
     return (
       <div className="flex flex-col items-center gap-2 px-4 py-14 text-center">
-        <AudioWaveform size={18} className="text-[var(--bt-muted)]" aria-hidden />
+        <AudioWaveform size={18} className="text-[var(--edl-muted)]" aria-hidden />
         <p className={TYPE.h2}>No clip selected</p>
-        <p className="max-w-[42ch] font-sans text-[12px] leading-relaxed text-[var(--bt-muted)]">
+        <p className="max-w-[42ch] font-sans text-[12px] leading-relaxed text-[var(--edl-muted)]">
           Choose a detection from the stream to audition its audio and inspect
           the time-frequency signature the model classified.
         </p>
@@ -278,11 +278,11 @@ export function SpectrogramPlayer({ clip }: { clip: SpectrogramClip | null }) {
     <div className="px-4 py-3.5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <div className="min-w-0">
-          <p className="font-sans text-[13px] font-semibold text-[var(--bt-text)]">
+          <p className="font-sans text-[13px] font-semibold text-[var(--edl-text)]">
             {clip.speciesName}
           </p>
           {clip.latinName ? (
-            <p className="font-sans text-[11px] italic text-[var(--bt-muted)]">
+            <p className="font-sans text-[11px] italic text-[var(--edl-muted)]">
               {clip.latinName}
             </p>
           ) : null}
@@ -297,7 +297,7 @@ export function SpectrogramPlayer({ clip }: { clip: SpectrogramClip | null }) {
       {/* ── Spectrogram surface ──────────────────────────────────────────── */}
       <div
         className="relative mt-3 overflow-hidden rounded-md border"
-        style={{ borderColor: "var(--bt-border-strong)", background: "#08080f" }}
+        style={{ borderColor: "var(--edl-border-strong)", background: "#08080f" }}
       >
         {usePrecomputed && clip.spectrogramUrl ? (
           <img
@@ -397,17 +397,17 @@ export function SpectrogramPlayer({ clip }: { clip: SpectrogramClip | null }) {
             setCurrentTime(next);
           }}
           disabled={!clip.audioUrl || duration === 0}
-          className="h-1 min-w-0 flex-1 accent-[var(--bt-emerald)]"
+          className="h-1 min-w-0 flex-1 accent-[var(--edl-emerald)]"
           aria-label="Seek"
         />
 
-        <span className="shrink-0 font-mono text-[11px] tabular-nums text-[var(--bt-muted)]">
+        <span className="shrink-0 font-mono text-[11px] tabular-nums text-[var(--edl-muted)]">
           {formatClock(currentTime)} / {formatClock(duration)}
         </span>
       </div>
 
       {error ? (
-        <p className="mt-2 font-sans text-[11px]" style={{ color: "var(--bt-danger)" }}>
+        <p className="mt-2 font-sans text-[11px]" style={{ color: "var(--edl-danger)" }}>
           {error}
         </p>
       ) : null}

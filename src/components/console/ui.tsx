@@ -16,16 +16,16 @@ import type { CSSProperties, ReactNode } from "react";
  */
 
 export const TYPE = {
-  h1: "font-sans text-[18px] font-semibold tracking-[-0.015em] text-[var(--bt-text)]",
-  h2: "font-sans text-[13px] font-semibold tracking-[-0.005em] text-[var(--bt-text)]",
-  body: "font-sans text-[12px] leading-relaxed text-[var(--bt-text-soft)]",
-  meta: "font-sans text-[11px] text-[var(--bt-muted)]",
+  h1: "font-sans text-[18px] font-semibold tracking-[-0.015em] text-[var(--edl-text)]",
+  h2: "font-sans text-[13px] font-semibold tracking-[-0.005em] text-[var(--edl-text)]",
+  body: "font-sans text-[12px] leading-relaxed text-[var(--edl-text-soft)]",
+  meta: "font-sans text-[11px] text-[var(--edl-muted)]",
   eyebrow:
-    "font-sans text-[10px] font-medium uppercase tracking-[0.11em] text-[var(--bt-muted)]",
-  num: "font-sans text-[24px] font-semibold leading-none tracking-[-0.02em] tabular-nums text-[var(--bt-text)]",
+    "font-sans text-[10px] font-medium uppercase tracking-[0.11em] text-[var(--edl-muted)]",
+  num: "font-sans text-[24px] font-semibold leading-none tracking-[-0.02em] tabular-nums text-[var(--edl-text)]",
   numSm:
-    "font-sans text-[16px] font-semibold leading-none tabular-nums text-[var(--bt-text)]",
-  code: "font-mono text-[11px] tabular-nums text-[var(--bt-text-soft)]",
+    "font-sans text-[16px] font-semibold leading-none tabular-nums text-[var(--edl-text)]",
+  code: "font-mono text-[11px] tabular-nums text-[var(--edl-text-soft)]",
 } as const;
 
 /** Four tones, no more. `fg` carries the meaning; the rest are rare fills. */
@@ -33,24 +33,24 @@ export type Tone = "neutral" | "positive" | "attention" | "critical";
 
 export const TONE: Record<Tone, { fg: string; soft: string; line: string }> = {
   neutral: {
-    fg: "var(--bt-muted)",
-    soft: "var(--bt-soft)",
-    line: "var(--bt-border)",
+    fg: "var(--edl-muted)",
+    soft: "var(--edl-soft)",
+    line: "var(--edl-border)",
   },
   positive: {
-    fg: "var(--bt-emerald)",
-    soft: "var(--bt-emerald-10)",
-    line: "var(--bt-emerald-30)",
+    fg: "var(--edl-emerald)",
+    soft: "var(--edl-emerald-10)",
+    line: "var(--edl-emerald-30)",
   },
   attention: {
-    fg: "var(--bt-gold)",
-    soft: "var(--bt-gold-10)",
-    line: "var(--bt-gold-40)",
+    fg: "var(--edl-gold)",
+    soft: "var(--edl-gold-10)",
+    line: "var(--edl-gold-40)",
   },
   critical: {
-    fg: "var(--bt-danger)",
-    soft: "var(--bt-danger-10)",
-    line: "var(--bt-danger-30)",
+    fg: "var(--edl-danger)",
+    soft: "var(--edl-danger-10)",
+    line: "var(--edl-danger-30)",
   },
 };
 
@@ -78,7 +78,7 @@ export function PageHeader({
     <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
       <div className="min-w-0">
         <h1 className={TYPE.h1}>{title}</h1>
-        <p className="mt-1 max-w-[62ch] font-sans text-[12px] leading-relaxed text-[var(--bt-muted)]">
+        <p className="mt-1 max-w-[62ch] font-sans text-[12px] leading-relaxed text-[var(--edl-muted)]">
           {purpose}
         </p>
       </div>
@@ -121,7 +121,7 @@ export function CardHeader({
   return (
     <div
       className={`flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 ${
-        divided ? "border-b border-[var(--bt-border)]" : ""
+        divided ? "border-b border-[var(--edl-border)]" : ""
       }`}
     >
       <div className="min-w-0">
@@ -195,7 +195,7 @@ export function Metric({
  */
 export function MetricRow({ children }: { children: ReactNode }) {
   return (
-    <Card className="grid grid-cols-2 divide-x divide-y divide-[var(--bt-border)] sm:grid-cols-3 lg:grid-cols-5 lg:divide-y-0">
+    <Card className="grid grid-cols-2 divide-x divide-y divide-[var(--edl-border)] sm:grid-cols-3 lg:grid-cols-5 lg:divide-y-0">
       {children}
     </Card>
   );
@@ -216,11 +216,11 @@ export function SpecRow({
   mono?: boolean;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-[var(--bt-border)] py-2.5 last:border-0">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-[var(--edl-border)] py-2.5 last:border-0">
       <div className="min-w-0">
-        <p className="font-sans text-[12px] text-[var(--bt-muted)]">{label}</p>
+        <p className="font-sans text-[12px] text-[var(--edl-muted)]">{label}</p>
         {hint ? (
-          <p className="mt-0.5 font-sans text-[11px] leading-snug text-[var(--bt-muted)]">
+          <p className="mt-0.5 font-sans text-[11px] leading-snug text-[var(--edl-muted)]">
             {hint}
           </p>
         ) : null}
@@ -229,8 +229,8 @@ export function SpecRow({
         <p
           className={`shrink-0 ${
             mono
-              ? "font-mono text-[11px] text-[var(--bt-text)]"
-              : "font-sans text-[12px] font-medium text-[var(--bt-text)]"
+              ? "font-mono text-[11px] text-[var(--edl-text)]"
+              : "font-sans text-[12px] font-medium text-[var(--edl-text)]"
           } tabular-nums`}
         >
           {value}
@@ -249,7 +249,7 @@ export function Meter({
   tone?: Tone;
 }) {
   return (
-    <span className="block h-[3px] w-full overflow-hidden rounded-full bg-[var(--bt-border)]">
+    <span className="block h-[3px] w-full overflow-hidden rounded-full bg-[var(--edl-border)]">
       <span
         className="block h-full rounded-full"
         style={{
@@ -275,7 +275,7 @@ export function Table({
 
   if (!hasRows && empty) {
     return (
-      <p className="px-4 py-8 text-center font-sans text-[12px] text-[var(--bt-muted)]">
+      <p className="px-4 py-8 text-center font-sans text-[12px] text-[var(--edl-muted)]">
         {empty}
       </p>
     );
@@ -290,7 +290,7 @@ export function Table({
               <th
                 key={label}
                 scope="col"
-                className={`sticky top-0 z-10 whitespace-nowrap border-b border-[var(--bt-border)] bg-[var(--bt-bg)] px-4 py-2.5 text-left ${TYPE.eyebrow}`}
+                className={`sticky top-0 z-10 whitespace-nowrap border-b border-[var(--edl-border)] bg-[var(--edl-bg)] px-4 py-2.5 text-left ${TYPE.eyebrow}`}
               >
                 {label}
               </th>
@@ -305,7 +305,7 @@ export function Table({
 
 export function Row({ children }: { children: ReactNode }) {
   return (
-    <tr className="border-b border-[var(--bt-border)] transition-colors last:border-0 hover:bg-[var(--bt-soft)]">
+    <tr className="border-b border-[var(--edl-border)] transition-colors last:border-0 hover:bg-[var(--edl-soft)]">
       {children}
     </tr>
   );
@@ -326,8 +326,8 @@ export function Cell({
     <td
       className={`whitespace-nowrap px-4 py-2.5 ${
         mono
-          ? "font-mono text-[11px] text-[var(--bt-text-soft)]"
-          : "font-sans text-[12px] text-[var(--bt-text-soft)]"
+          ? "font-mono text-[11px] text-[var(--edl-text-soft)]"
+          : "font-sans text-[12px] text-[var(--edl-text-soft)]"
       } ${align === "right" ? "text-right tabular-nums" : ""} ${className}`}
     >
       {children}
@@ -353,7 +353,7 @@ export function EmptyState({
   return (
     <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
       <p className={TYPE.h2}>{title}</p>
-      <p className="max-w-[46ch] font-sans text-[12px] leading-relaxed text-[var(--bt-muted)]">
+      <p className="max-w-[46ch] font-sans text-[12px] leading-relaxed text-[var(--edl-muted)]">
         {detail}
       </p>
       {action ? <div className="mt-2">{action}</div> : null}

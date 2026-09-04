@@ -42,7 +42,7 @@ export function createAdminSupabase(): AdminSupabaseClient {
         detectSessionInUrl: false,
       },
       global: {
-        headers: { "X-Client-Info": "biotwin-core/service" },
+        headers: { "X-Client-Info": "ecodatalink-core/service" },
       },
     }
   );

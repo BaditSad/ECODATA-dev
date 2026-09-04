@@ -14,7 +14,7 @@ export default function LobbyPairPage() {
   return (
     <main className="flex min-h-[100svh] flex-col items-center justify-center bg-canopy-950 px-6 py-12">
       <div className="w-full max-w-[24rem]">
-        <p className="hud-eyebrow">BioTwin display</p>
+        <p className="hud-eyebrow">Eco-Data Link display</p>
         <h1 className="mt-3 font-sans text-[1.6rem] font-light leading-tight tracking-[-0.03em] text-sand-100">
           Pair this screen
         </h1>

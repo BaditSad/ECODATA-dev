@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════════════════
--- BioTwin — Production Core Schema
+-- Eco-Data Link — Production Core Schema
 -- ═══════════════════════════════════════════════════════════════════════════
 -- Multi-tenant biodiversity digital twins for luxury eco-resorts.
 --

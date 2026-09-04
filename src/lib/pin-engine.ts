@@ -1,5 +1,5 @@
 /**
- * BioTwin — guest access code rotation engine.
+ * Eco-Data Link — guest access code rotation engine.
  *
  * ── The invariant ───────────────────────────────────────────────────────────
  * Codes rotate on a fixed cadence and each stays valid longer than the cadence,

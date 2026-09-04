@@ -144,7 +144,7 @@ export function TwinAssetUploader({ tenantId }: { tenantId: string }) {
             accept={accept}
             required
             onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-            className="console-input mt-1.5 h-8 py-1 file:mr-2 file:rounded file:border-0 file:bg-[var(--bt-border-strong)] file:px-2 file:py-0.5 file:font-sans file:text-[11px] file:text-[var(--bt-text)]"
+            className="console-input mt-1.5 h-8 py-1 file:mr-2 file:rounded file:border-0 file:bg-[var(--edl-border-strong)] file:px-2 file:py-0.5 file:font-sans file:text-[11px] file:text-[var(--edl-text)]"
           />
           {file ? (
             <span className={`mt-1 block ${TYPE.meta}`}>
@@ -225,9 +225,9 @@ export function TwinAssetUploader({ tenantId }: { tenantId: string }) {
         <input
           type="checkbox"
           name="publish"
-          className="h-3.5 w-3.5 accent-[var(--bt-emerald)]"
+          className="h-3.5 w-3.5 accent-[var(--edl-emerald)]"
         />
-        <span className="font-sans text-[12px] text-[var(--bt-text-soft)]">
+        <span className="font-sans text-[12px] text-[var(--edl-text-soft)]">
           Publish as the live twin
         </span>
         <span className={TYPE.meta}>
@@ -244,12 +244,12 @@ export function TwinAssetUploader({ tenantId }: { tenantId: string }) {
                 ? `Uploading ${file ? formatBytes(file.size) : ""}…`
                 : "Registering asset…"}
           </p>
-          <span className="mt-1.5 block h-[3px] w-full overflow-hidden rounded-full bg-[var(--bt-border)]">
+          <span className="mt-1.5 block h-[3px] w-full overflow-hidden rounded-full bg-[var(--edl-border)]">
             <span
               className="block h-full rounded-full transition-[width] duration-300"
               style={{
                 width: phase === "uploading" ? `${Math.max(8, progress)}%` : "100%",
-                background: "var(--bt-emerald)",
+                background: "var(--edl-emerald)",
               }}
             />
           </span>
@@ -260,7 +260,7 @@ export function TwinAssetUploader({ tenantId }: { tenantId: string }) {
         <p
           className="mt-3 font-sans text-[11px]"
           style={{
-            color: notice.tone === "ok" ? "var(--bt-emerald)" : "var(--bt-danger)",
+            color: notice.tone === "ok" ? "var(--edl-emerald)" : "var(--edl-danger)",
           }}
           role="status"
         >

@@ -75,10 +75,10 @@ export function AccessCodeManager({
 
   return (
     <>
-      <div className="border-b border-[var(--bt-border)] px-4 py-3.5">
+      <div className="border-b border-[var(--edl-border)] px-4 py-3.5">
         <p className={TYPE.eyebrow}>Master lobby code</p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <code className="rounded border border-[var(--bt-border-strong)] bg-[var(--bt-bg)] px-2.5 py-1.5 font-mono text-[13px] tracking-[0.08em] text-[var(--bt-text)]">
+          <code className="rounded border border-[var(--edl-border-strong)] bg-[var(--edl-bg)] px-2.5 py-1.5 font-mono text-[13px] tracking-[0.08em] text-[var(--edl-text)]">
             {lobbyCode}
           </code>
           <span className={TYPE.meta}>
@@ -117,7 +117,7 @@ export function AccessCodeManager({
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--bt-border)] px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--edl-border)] px-4 py-3">
         <div className="min-w-0">
           <p className={TYPE.eyebrow}>Guest PIN cycles</p>
           <p className={`mt-0.5 ${TYPE.meta}`}>
@@ -139,11 +139,11 @@ export function AccessCodeManager({
       </div>
 
       {notice ? (
-        <div className="border-b border-[var(--bt-border)] px-4 py-2.5">
+        <div className="border-b border-[var(--edl-border)] px-4 py-2.5">
           <p
             className="font-sans text-[11px]"
             style={{
-              color: notice.tone === "ok" ? "var(--bt-emerald)" : "var(--bt-danger)",
+              color: notice.tone === "ok" ? "var(--edl-emerald)" : "var(--edl-danger)",
             }}
             role="status"
           >
@@ -164,7 +164,7 @@ export function AccessCodeManager({
             <Row key={code.id}>
               <Cell align="right">{code.cycle_index}</Cell>
               <Cell mono>
-                <span className="text-[13px] tracking-[0.14em] text-[var(--bt-text)]">
+                <span className="text-[13px] tracking-[0.14em] text-[var(--edl-text)]">
                   {code.code}
                 </span>
               </Cell>
@@ -181,7 +181,7 @@ export function AccessCodeManager({
                       disabled={pending}
                       onClick={() => run(() => revokeGuestCode(tenantId, code.id))}
                       className="console-btn-quiet"
-                      style={{ color: "var(--bt-danger)" }}
+                      style={{ color: "var(--edl-danger)" }}
                     >
                       Revoke
                     </button>

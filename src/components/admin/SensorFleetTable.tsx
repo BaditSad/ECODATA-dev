@@ -54,18 +54,18 @@ export function SensorFleetTable({
   return (
     <>
       {notice ? (
-        <div className="border-b border-[var(--bt-border)] px-4 py-2.5">
+        <div className="border-b border-[var(--edl-border)] px-4 py-2.5">
           <p
             className="font-sans text-[11px]"
             style={{
-              color: notice.tone === "ok" ? "var(--bt-emerald)" : "var(--bt-danger)",
+              color: notice.tone === "ok" ? "var(--edl-emerald)" : "var(--edl-danger)",
             }}
             role="status"
           >
             {notice.text}
           </p>
           {rotatedKey ? (
-            <code className="mt-2 block overflow-x-auto rounded border border-[var(--bt-border-strong)] bg-[var(--bt-bg)] px-2.5 py-2 font-mono text-[11px] text-[var(--bt-text)]">
+            <code className="mt-2 block overflow-x-auto rounded border border-[var(--edl-border-strong)] bg-[var(--edl-bg)] px-2.5 py-2 font-mono text-[11px] text-[var(--edl-text)]">
               {rotatedKey}
             </code>
           ) : null}
@@ -94,7 +94,7 @@ export function SensorFleetTable({
           return (
             <Row key={sensor.id}>
               <Cell>
-                <span className="font-medium text-[var(--bt-text)]">
+                <span className="font-medium text-[var(--edl-text)]">
                   {sensor.name}
                 </span>
                 {sensor.firmware_version ? (
@@ -134,14 +134,14 @@ export function SensorFleetTable({
               </Cell>
 
               <Cell align="right">
-                <span style={stale ? { color: "var(--bt-danger)" } : undefined}>
+                <span style={stale ? { color: "var(--edl-danger)" } : undefined}>
                   {formatRelative(sensor.last_ping, now)}
                 </span>
               </Cell>
 
               <Cell mono>
                 {revoked ? (
-                  <span style={{ color: "var(--bt-danger)" }}>revoked</span>
+                  <span style={{ color: "var(--edl-danger)" }}>revoked</span>
                 ) : (
                   `…${sensor.api_key_last_four}`
                 )}
@@ -171,7 +171,7 @@ export function SensorFleetTable({
                         )
                       }
                       className="console-btn-quiet"
-                      style={{ color: "var(--bt-danger)" }}
+                      style={{ color: "var(--edl-danger)" }}
                     >
                       Revoke
                     </button>

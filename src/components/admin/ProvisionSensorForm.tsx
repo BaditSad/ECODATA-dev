@@ -54,11 +54,11 @@ export function ProvisionSensorForm({ tenantId }: { tenantId: string }) {
         <div
           className="rounded-md border p-3"
           style={{
-            borderColor: "var(--bt-gold-40)",
-            background: "var(--bt-gold-10)",
+            borderColor: "var(--edl-gold-40)",
+            background: "var(--edl-gold-10)",
           }}
         >
-          <p className="flex items-center gap-1.5 font-sans text-[12px] font-medium text-[var(--bt-text)]">
+          <p className="flex items-center gap-1.5 font-sans text-[12px] font-medium text-[var(--edl-text)]">
             <KeyRound size={13} aria-hidden />
             API key for {issued.name}
           </p>
@@ -69,7 +69,7 @@ export function ProvisionSensorForm({ tenantId }: { tenantId: string }) {
           </p>
 
           <div className="mt-2.5 flex items-center gap-2">
-            <code className="min-w-0 flex-1 overflow-x-auto rounded border border-[var(--bt-border-strong)] bg-[var(--bt-bg)] px-2.5 py-2 font-mono text-[11px] text-[var(--bt-text)]">
+            <code className="min-w-0 flex-1 overflow-x-auto rounded border border-[var(--edl-border-strong)] bg-[var(--edl-bg)] px-2.5 py-2 font-mono text-[11px] text-[var(--edl-text)]">
               {issued.rawApiKey}
             </code>
             <button type="button" onClick={copyKey} className="console-btn-secondary">
@@ -162,7 +162,7 @@ export function ProvisionSensorForm({ tenantId }: { tenantId: string }) {
       {error ? (
         <p
           className="mt-3 font-sans text-[11px]"
-          style={{ color: "var(--bt-danger)" }}
+          style={{ color: "var(--edl-danger)" }}
           role="alert"
         >
           {error}

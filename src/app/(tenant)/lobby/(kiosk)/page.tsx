@@ -3,7 +3,7 @@ import { requireLobbySession } from "@/lib/auth/guards";
 import { fetchGuestTwinView } from "@/lib/data/guest";
 import { LobbyKiosk } from "@/components/lobby/LobbyKiosk";
 
-export const metadata: Metadata = { title: "BioTwin display" };
+export const metadata: Metadata = { title: "Eco-Data Link display" };
 
 export const dynamic = "force-dynamic";
 

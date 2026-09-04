@@ -86,7 +86,7 @@ export default async function TenantDetailPage({
     <Page>
       <Link
         href="/admin"
-        className="inline-flex items-center gap-1.5 font-sans text-[11px] text-[var(--bt-muted)] transition-colors hover:text-[var(--bt-text)]"
+        className="inline-flex items-center gap-1.5 font-sans text-[11px] text-[var(--edl-muted)] transition-colors hover:text-[var(--edl-text)]"
       >
         <ArrowLeft size={12} aria-hidden />
         Estate

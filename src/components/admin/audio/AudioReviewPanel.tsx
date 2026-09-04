@@ -26,13 +26,13 @@ export function AudioReviewPanel({ clips }: { clips: SpectrogramClip[] }) {
 
   return (
     <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_22rem]">
-      <div className="border-b border-[var(--bt-border)] lg:border-b-0 lg:border-r">
+      <div className="border-b border-[var(--edl-border)] lg:border-b-0 lg:border-r">
         <SpectrogramPlayer clip={selected} />
       </div>
 
       <div className="max-h-[30rem] overflow-y-auto">
         {clips.length === 0 ? (
-          <p className="px-4 py-10 text-center font-sans text-[12px] text-[var(--bt-muted)]">
+          <p className="px-4 py-10 text-center font-sans text-[12px] text-[var(--edl-muted)]">
             No detections in this window.
           </p>
         ) : (
@@ -47,13 +47,13 @@ export function AudioReviewPanel({ clips }: { clips: SpectrogramClip[] }) {
                     type="button"
                     onClick={() => setSelectedId(clip.id)}
                     aria-current={active}
-                    className="w-full border-b border-[var(--bt-border)] px-4 py-2.5 text-left transition-colors last:border-0 hover:bg-[var(--bt-soft)]"
+                    className="w-full border-b border-[var(--edl-border)] px-4 py-2.5 text-left transition-colors last:border-0 hover:bg-[var(--edl-soft)]"
                     style={
-                      active ? { background: "var(--bt-emerald-10)" } : undefined
+                      active ? { background: "var(--edl-emerald-10)" } : undefined
                     }
                   >
                     <span className="flex items-baseline justify-between gap-2">
-                      <span className="min-w-0 truncate font-sans text-[12px] font-medium text-[var(--bt-text)]">
+                      <span className="min-w-0 truncate font-sans text-[12px] font-medium text-[var(--edl-text)]">
                         {clip.speciesName}
                       </span>
                       <span

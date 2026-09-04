@@ -559,7 +559,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 /** Cheap liveness probe for firmware to confirm connectivity before uploading. */
 export async function GET(): Promise<NextResponse> {
   return apiSuccess({
-    service: "biotwin-telemetry-ingest",
+    service: "ecodatalink-telemetry-ingest",
     version: "v1",
     acceptedContentTypes: ["multipart/form-data", "application/json"],
     maxAudioBytes: MAX_AUDIO_BYTES,

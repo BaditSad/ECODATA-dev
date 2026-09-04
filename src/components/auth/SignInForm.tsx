@@ -79,7 +79,7 @@ export function SignInForm({ redirectTo }: { redirectTo?: string }) {
       {error ? (
         <p
           className="mt-3 font-sans text-[11px]"
-          style={{ color: "var(--bt-danger)" }}
+          style={{ color: "var(--edl-danger)" }}
           role="alert"
         >
           {error}

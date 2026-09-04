@@ -3,12 +3,12 @@
 @tailwind utilities;
 
 /*
-  BioTwin — production core.
+  Eco-Data Link — production core.
 
   Two registers, one palette:
 
   • Console (`/admin`, `/hotel-portal`) — dense, technical, dark. Colour is
-    routed through `--bt-*` tokens carried over from the demo repo's management
+    routed through `--edl-*` tokens carried over from the demo repo's management
     console, so both products read as one system. Emerald is a state accent,
     never decoration.
 
@@ -19,33 +19,33 @@
 
 :root {
   /* ── Console tokens (dark, the only console theme) ───────────────────── */
-  --bt-bg: #0b0f17;
-  --bt-card: #1e293b;
-  --bt-card-40: rgba(30, 41, 59, 0.45);
-  --bt-soft: #131a26;
-  --bt-border: #1e293b;
-  --bt-border-strong: #334155;
+  --edl-bg: #0b0f17;
+  --edl-card: #1e293b;
+  --edl-card-40: rgba(30, 41, 59, 0.45);
+  --edl-soft: #131a26;
+  --edl-border: #1e293b;
+  --edl-border-strong: #334155;
 
-  --bt-emerald: #10b981;
-  --bt-emerald-10: rgba(16, 185, 129, 0.1);
-  --bt-emerald-15: rgba(16, 185, 129, 0.15);
-  --bt-emerald-30: rgba(16, 185, 129, 0.3);
-  --bt-emerald-50: rgba(16, 185, 129, 0.5);
+  --edl-emerald: #10b981;
+  --edl-emerald-10: rgba(16, 185, 129, 0.1);
+  --edl-emerald-15: rgba(16, 185, 129, 0.15);
+  --edl-emerald-30: rgba(16, 185, 129, 0.3);
+  --edl-emerald-50: rgba(16, 185, 129, 0.5);
 
-  --bt-gold: #f59e0b;
-  --bt-gold-10: rgba(245, 158, 11, 0.1);
-  --bt-gold-40: rgba(245, 158, 11, 0.4);
+  --edl-gold: #f59e0b;
+  --edl-gold-10: rgba(245, 158, 11, 0.1);
+  --edl-gold-40: rgba(245, 158, 11, 0.4);
 
-  --bt-danger: #f87171;
-  --bt-danger-10: rgba(248, 113, 113, 0.14);
-  --bt-danger-30: rgba(248, 113, 113, 0.38);
+  --edl-danger: #f87171;
+  --edl-danger-10: rgba(248, 113, 113, 0.14);
+  --edl-danger-30: rgba(248, 113, 113, 0.38);
 
-  --bt-muted: #94a3b8;
-  --bt-text: #ffffff;
-  --bt-text-soft: #e2e8f0;
-  --bt-ring: #0b0f17;
-  --bt-knob: #ffffff;
-  --bt-overlay: rgba(11, 15, 23, 0.85);
+  --edl-muted: #94a3b8;
+  --edl-text: #ffffff;
+  --edl-text-soft: #e2e8f0;
+  --edl-ring: #0b0f17;
+  --edl-knob: #ffffff;
+  --edl-overlay: rgba(11, 15, 23, 0.85);
 
   /* ── Guest / lobby glass ─────────────────────────────────────────────── */
   --hud-r-sm: 8px;
@@ -108,36 +108,36 @@
 @layer components {
   /* ── Console shell ───────────────────────────────────────────────────── */
   .console-root {
-    background: var(--bt-bg);
-    color: var(--bt-text);
+    background: var(--edl-bg);
+    color: var(--edl-text);
   }
 
   .console-card {
     @apply rounded-lg border;
-    border-color: var(--bt-border);
-    background: var(--bt-card-40);
+    border-color: var(--edl-border);
+    background: var(--edl-card-40);
   }
 
   .console-input {
     @apply w-full rounded-md border px-2.5 font-sans text-[12px] leading-relaxed outline-none transition-colors;
-    border-color: var(--bt-border-strong);
-    background: var(--bt-soft);
-    color: var(--bt-text);
+    border-color: var(--edl-border-strong);
+    background: var(--edl-soft);
+    color: var(--edl-text);
   }
 
   .console-input::placeholder {
-    color: var(--bt-muted);
+    color: var(--edl-muted);
   }
 
   .console-input:focus {
-    border-color: var(--bt-emerald);
+    border-color: var(--edl-emerald);
   }
 
   /* Sole emerald fill in the interface: one primary action per group. */
   .console-btn-primary {
     @apply inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-md border border-transparent px-3 font-sans text-[12px] font-medium transition-opacity disabled:cursor-not-allowed disabled:opacity-45;
-    background: var(--bt-emerald);
-    color: var(--bt-ring);
+    background: var(--edl-emerald);
+    color: var(--edl-ring);
   }
 
   .console-btn-primary:hover:not(:disabled) {
@@ -146,21 +146,21 @@
 
   .console-btn-secondary {
     @apply inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-md border bg-transparent px-3 font-sans text-[12px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45;
-    border-color: var(--bt-border-strong);
-    color: var(--bt-text);
+    border-color: var(--edl-border-strong);
+    color: var(--edl-text);
   }
 
   .console-btn-secondary:hover:not(:disabled) {
-    background: var(--bt-soft);
+    background: var(--edl-soft);
   }
 
   .console-btn-quiet {
     @apply inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 font-sans text-[12px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45;
-    color: var(--bt-muted);
+    color: var(--edl-muted);
   }
 
   .console-btn-quiet:hover:not(:disabled) {
-    color: var(--bt-text);
+    color: var(--edl-text);
   }
 
   /* ── Guest / lobby glass ─────────────────────────────────────────────── */

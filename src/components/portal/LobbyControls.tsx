@@ -129,9 +129,9 @@ export function LobbyControls({
               type="checkbox"
               name="showLiveAlerts"
               defaultChecked={settings?.show_live_alerts ?? true}
-              className="h-3.5 w-3.5 accent-[var(--bt-emerald)]"
+              className="h-3.5 w-3.5 accent-[var(--edl-emerald)]"
             />
-            <span className="font-sans text-[12px] text-[var(--bt-text-soft)]">
+            <span className="font-sans text-[12px] text-[var(--edl-text-soft)]">
               Show live detection alerts
             </span>
           </label>
@@ -141,9 +141,9 @@ export function LobbyControls({
               type="checkbox"
               name="showSpeciesNames"
               defaultChecked={settings?.show_species_names ?? true}
-              className="h-3.5 w-3.5 accent-[var(--bt-emerald)]"
+              className="h-3.5 w-3.5 accent-[var(--edl-emerald)]"
             />
-            <span className="font-sans text-[12px] text-[var(--bt-text-soft)]">
+            <span className="font-sans text-[12px] text-[var(--edl-text-soft)]">
               Show species names on screen
             </span>
           </label>
@@ -153,7 +153,7 @@ export function LobbyControls({
           <p
             className="mt-3 font-sans text-[11px]"
             style={{
-              color: notice.tone === "ok" ? "var(--bt-emerald)" : "var(--bt-danger)",
+              color: notice.tone === "ok" ? "var(--edl-emerald)" : "var(--edl-danger)",
             }}
             role="status"
           >

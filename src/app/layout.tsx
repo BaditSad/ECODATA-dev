@@ -26,8 +26,8 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: "BioTwin",
-    template: "%s · BioTwin",
+    default: "Eco-Data Link",
+    template: "%s · Eco-Data Link",
   },
   description:
     "Biodiversity digital twins, live bioacoustic telemetry and TNFD-aligned reporting for luxury eco-resorts.",

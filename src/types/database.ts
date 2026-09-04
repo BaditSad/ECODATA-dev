@@ -1,5 +1,5 @@
 /**
- * BioTwin — database contract.
+ * Eco-Data Link — database contract.
  *
  * Hand-maintained to mirror `supabase/migrations/20260904000000_core_schema.sql`.
  * `npm run db:types` regenerates a raw copy into `supabase-generated.ts`; this

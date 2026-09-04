@@ -18,8 +18,13 @@ import { serverEnv } from "@/lib/env";
 
 const KEY_BYTES = 32;
 
-/** Distinguishes a BioTwin sensor key in logs and support tickets. */
-const KEY_PREFIX = "btk";
+/**
+ * Distinguishes an Eco-Data Link sensor key in logs and support tickets.
+ *
+ * Baked into every key ever issued, so changing it invalidates the entire
+ * provisioned fleet. Treat as frozen once hardware ships.
+ */
+const KEY_PREFIX = "edlk";
 
 export interface ProvisionedKey {
   /** Shown exactly once, at provisioning. Never recoverable afterwards. */

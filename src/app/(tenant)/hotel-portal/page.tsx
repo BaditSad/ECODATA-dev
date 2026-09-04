@@ -135,7 +135,7 @@ export default async function HotelPortalPage({
         />
         <div className="px-4 py-1">
           {snapshot.activeCodes.length === 0 ? (
-            <p className="py-6 text-center font-sans text-[12px]" style={{ color: "var(--bt-danger)" }}>
+            <p className="py-6 text-center font-sans text-[12px]" style={{ color: "var(--edl-danger)" }}>
               No guest code is currently live. Contact platform support — guests
               cannot sign in until a code is issued.
             </p>
@@ -148,7 +148,7 @@ export default async function HotelPortalPage({
                   code.valid_until
                 )}`}
               >
-                <span className="font-mono text-[16px] tracking-[0.18em] text-[var(--bt-text)]">
+                <span className="font-mono text-[16px] tracking-[0.18em] text-[var(--edl-text)]">
                   {code.code}
                 </span>
               </SpecRow>
@@ -180,7 +180,7 @@ export default async function HotelPortalPage({
             return (
               <Row key={sensor.id}>
                 <Cell>
-                  <span className="font-medium text-[var(--bt-text)]">
+                  <span className="font-medium text-[var(--edl-text)]">
                     {sensor.name}
                   </span>
                 </Cell>
@@ -210,7 +210,7 @@ export default async function HotelPortalPage({
                   <Status tone={signal.tone} label={signal.label} />
                 </Cell>
                 <Cell align="right">
-                  <span style={stale ? { color: "var(--bt-danger)" } : undefined}>
+                  <span style={stale ? { color: "var(--edl-danger)" } : undefined}>
                     {formatRelative(sensor.last_ping, now)}
                   </span>
                 </Cell>
@@ -250,7 +250,7 @@ export default async function HotelPortalPage({
           {snapshot.recentDetections.map((detection) => (
             <Row key={detection.id}>
               <Cell>
-                <span className="font-medium text-[var(--bt-text)]">
+                <span className="font-medium text-[var(--edl-text)]">
                   {detection.species_name}
                 </span>
                 {detection.latin_name ? (
@@ -294,7 +294,7 @@ export default async function HotelPortalPage({
             report.periodEnd
           )}. Detections an operator rejected are excluded from this evidence base.`}
         >
-          <span className="inline-flex rounded-md border border-[var(--bt-border)] bg-[var(--bt-soft)] p-[3px]">
+          <span className="inline-flex rounded-md border border-[var(--edl-border)] bg-[var(--edl-soft)] p-[3px]">
             {REPORT_PERIODS.map((option) => {
               const active = option.days === periodDays;
               return (
@@ -305,11 +305,11 @@ export default async function HotelPortalPage({
                   style={
                     active
                       ? {
-                          background: "var(--bt-card)",
-                          color: "var(--bt-text)",
+                          background: "var(--edl-card)",
+                          color: "var(--edl-text)",
                           fontWeight: 500,
                         }
-                      : { color: "var(--bt-muted)" }
+                      : { color: "var(--edl-muted)" }
                   }
                 >
                   {option.label}
@@ -319,7 +319,7 @@ export default async function HotelPortalPage({
           </span>
         </CardHeader>
 
-        <div className="grid grid-cols-2 divide-x divide-y divide-[var(--bt-border)] sm:grid-cols-4 sm:divide-y-0">
+        <div className="grid grid-cols-2 divide-x divide-y divide-[var(--edl-border)] sm:grid-cols-4 sm:divide-y-0">
           <Metric
             label="Total detections"
             value={formatNumber(report.totalDetections)}
@@ -364,7 +364,7 @@ export default async function HotelPortalPage({
           {report.species.map((line) => (
             <Row key={line.speciesName}>
               <Cell>
-                <span className="font-medium text-[var(--bt-text)]">
+                <span className="font-medium text-[var(--edl-text)]">
                   {line.speciesName}
                 </span>
               </Cell>

@@ -29,8 +29,8 @@ export interface SessionPayload {
   exp: number;
 }
 
-export const GUEST_COOKIE = "bt_guest_session";
-export const LOBBY_COOKIE = "bt_lobby_session";
+export const GUEST_COOKIE = "edl_guest_session";
+export const LOBBY_COOKIE = "edl_lobby_session";
 
 export function cookieNameFor(tier: AccessTier): string {
   return tier === "guest" ? GUEST_COOKIE : LOBBY_COOKIE;

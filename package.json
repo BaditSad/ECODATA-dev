@@ -1,8 +1,8 @@
 {
-  "name": "biotwin-core",
+  "name": "ecodatalink-core",
   "version": "0.1.0",
   "private": true,
-  "description": "BioTwin production core — multi-tenant biodiversity digital twins, bioacoustic telemetry, TNFD reporting.",
+  "description": "Eco-Data Link production core — multi-tenant biodiversity digital twins, bioacoustic telemetry, TNFD reporting.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

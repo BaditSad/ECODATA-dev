@@ -104,7 +104,7 @@ export default async function AudioAnalyticsPage({
           WINDOWS.find((option) => option.hours === windowHours)?.label ?? "24 h"
         }.`}
       >
-        <span className="inline-flex rounded-md border border-[var(--bt-border)] bg-[var(--bt-soft)] p-[3px]">
+        <span className="inline-flex rounded-md border border-[var(--edl-border)] bg-[var(--edl-soft)] p-[3px]">
           {WINDOWS.map((option) => {
             const active = option.hours === windowHours;
             return (
@@ -115,11 +115,11 @@ export default async function AudioAnalyticsPage({
                 style={
                   active
                     ? {
-                        background: "var(--bt-card)",
-                        color: "var(--bt-text)",
+                        background: "var(--edl-card)",
+                        color: "var(--edl-text)",
                         fontWeight: 500,
                       }
-                    : { color: "var(--bt-muted)" }
+                    : { color: "var(--edl-muted)" }
                 }
               >
                 {option.label}

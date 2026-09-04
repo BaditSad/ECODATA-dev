@@ -19,7 +19,7 @@ export function ThroughputChart({
 }) {
   if (buckets.length === 0) {
     return (
-      <p className="px-4 py-10 text-center font-sans text-[12px] text-[var(--bt-muted)]">
+      <p className="px-4 py-10 text-center font-sans text-[12px] text-[var(--edl-muted)]">
         No ingest attempts recorded in this window. Either no balise is
         transmitting, or none has been provisioned yet.
       </p>
@@ -114,7 +114,7 @@ export function ThroughputChart({
                 // was silent, distinct from an hour trimmed off the chart.
                 <div
                   className="w-full"
-                  style={{ height: "1px", background: "var(--bt-border-strong)" }}
+                  style={{ height: "1px", background: "var(--edl-border-strong)" }}
                 />
               )}
             </div>
@@ -129,7 +129,7 @@ export function ThroughputChart({
         <span className={TYPE.meta}>now</span>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 border-t border-[var(--bt-border)] pt-3">
+      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 border-t border-[var(--edl-border)] pt-3">
         <span className={TYPE.meta}>
           <span style={{ color: TONE.positive.fg }}>■</span> {formatNumber(totals.accepted)}{" "}
           accepted

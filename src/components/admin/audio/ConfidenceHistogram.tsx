@@ -24,7 +24,7 @@ export function ConfidenceHistogram({
 
   if (total === 0) {
     return (
-      <p className="px-4 py-10 text-center font-sans text-[12px] text-[var(--bt-muted)]">
+      <p className="px-4 py-10 text-center font-sans text-[12px] text-[var(--edl-muted)]">
         No detections in this window, so there is no distribution to plot.
       </p>
     );
@@ -63,7 +63,7 @@ export function ConfidenceHistogram({
               className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1.5"
               style={{ height: "100%" }}
             >
-              <span className="font-sans text-[10px] tabular-nums text-[var(--bt-muted)]">
+              <span className="font-sans text-[10px] tabular-nums text-[var(--edl-muted)]">
                 {bin.detections > 0 ? formatNumber(bin.detections) : ""}
               </span>
               <div
@@ -87,14 +87,14 @@ export function ConfidenceHistogram({
         {bins.map((bin) => (
           <span
             key={bin.bucket_index}
-            className="min-w-0 flex-1 text-center font-sans text-[9.5px] tabular-nums text-[var(--bt-muted)]"
+            className="min-w-0 flex-1 text-center font-sans text-[9.5px] tabular-nums text-[var(--edl-muted)]"
           >
             {bin.upper_bound.toFixed(1)}
           </span>
         ))}
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 border-t border-[var(--bt-border)] pt-3">
+      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 border-t border-[var(--edl-border)] pt-3">
         <span className={TYPE.meta}>
           <span style={{ color: TONE.positive.fg }}>■</span> ≥ 0.85 auto-publish ·{" "}
           {formatPercent(aboveThreshold / total, 1)} of calls
