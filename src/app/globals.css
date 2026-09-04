@@ -36,6 +36,14 @@
   --edl-gold-10: rgba(245, 158, 11, 0.1);
   --edl-gold-40: rgba(245, 158, 11, 0.4);
 
+  --edl-sky: #38bdf8;
+  --edl-sky-10: rgba(56, 189, 248, 0.12);
+  --edl-sky-40: rgba(56, 189, 248, 0.4);
+
+  --edl-violet: #c084fc;
+  --edl-violet-10: rgba(192, 132, 252, 0.14);
+  --edl-violet-40: rgba(192, 132, 252, 0.4);
+
   --edl-danger: #f87171;
   --edl-danger-10: rgba(248, 113, 113, 0.14);
   --edl-danger-30: rgba(248, 113, 113, 0.38);

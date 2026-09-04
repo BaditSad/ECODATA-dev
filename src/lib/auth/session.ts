@@ -1,3 +1,4 @@
+import { ipInAnyCidr } from "@/lib/auth/cidr";
 import { serverEnv } from "@/lib/env";
 
 /**
@@ -18,11 +19,24 @@ import { serverEnv } from "@/lib/env";
 
 export type AccessTier = "guest" | "lobby";
 
+export type SessionSource = "wifi" | "remote";
+
 export interface SessionPayload {
   tier: AccessTier;
   tenantId: string;
   tenantSlug: string;
   tenantName: string;
+  /**
+   * How this session was minted. Absent on cookies issued before on-network
+   * access existed — those are treated as remote and rejected if overlong.
+   */
+  source?: SessionSource;
+  /**
+   * Snapshot of the resort prefixes at mint time. Used to drop a wifi session
+   * the moment the device leaves the hotel network, without a database round
+   * trip on the Edge.
+   */
+  networkCidrs?: string[];
   /** Issued-at, seconds since epoch. */
   iat: number;
   /** Expiry, seconds since epoch. */
@@ -37,18 +51,23 @@ export function cookieNameFor(tier: AccessTier): string {
 }
 
 /**
- * A guest session never outlives the code that opened it, and is capped
- * independently so a code issued with a long tail cannot mint a session that
- * outlives the stay it was meant to cover.
+ * Absolute ceiling for a wifi-sourced cookie. The hotel's registered prefixes
+ * are the real control: while the device stays on them the cookie is renewed;
+ * the cap only bounds a single cookie so a stolen laptop is not signed in for
+ * weeks. Default per-tenant window is 12 hours.
  */
-export const GUEST_SESSION_MAX_SECONDS = 60 * 60 * 24 * 14;
+export const WIFI_SESSION_MAX_SECONDS = 60 * 60 * 24;
 
 /**
- * Lobby displays are wall-mounted and unattended: an operator pairs one once
- * and must not be asked to retype a code because a cookie lapsed overnight.
- * Rotating the tenant's lobby code is what revokes these.
+ * Absolute ceiling for PIN, lobby-code and remote-pass sessions. The hotel
+ * sets a shorter window (default 4 hours). These are never auto-renewed.
  */
-export const LOBBY_SESSION_MAX_SECONDS = 60 * 60 * 24 * 365;
+export const REMOTE_SESSION_MAX_SECONDS = 60 * 60 * 12;
+
+/** @deprecated Use WIFI_SESSION_MAX_SECONDS / REMOTE_SESSION_MAX_SECONDS. */
+export const GUEST_SESSION_MAX_SECONDS = REMOTE_SESSION_MAX_SECONDS;
+/** @deprecated Lobby pairing off-network now uses REMOTE_SESSION_MAX_SECONDS. */
+export const LOBBY_SESSION_MAX_SECONDS = WIFI_SESSION_MAX_SECONDS;
 
 /* ── base64url (Edge-safe, no Buffer) ────────────────────────────────────── */
 
@@ -107,9 +126,17 @@ export interface MintOptions {
   tenantId: string;
   tenantSlug: string;
   tenantName: string;
+  source: SessionSource;
+  /** Required when `source` is `wifi`; ignored otherwise. */
+  networkCidrs?: string[];
+  /**
+   * Requested lifetime in seconds, typically the tenant's on-network or
+   * remote window. Clamped to the source cap.
+   */
+  maxAgeSeconds: number;
   /**
    * Hard ceiling from the credential itself — a guest code's `valid_until`.
-   * The session expires at whichever comes first, this or the tier cap.
+   * The session expires at whichever comes first, this or the source cap.
    */
   notAfter?: Date | null;
   now?: Date;
@@ -126,12 +153,13 @@ export async function mintSession(options: MintOptions): Promise<MintedSession> 
   const now = options.now ?? new Date();
   const issuedAt = Math.floor(now.getTime() / 1000);
 
-  const tierCap =
-    options.tier === "guest"
-      ? GUEST_SESSION_MAX_SECONDS
-      : LOBBY_SESSION_MAX_SECONDS;
+  const sourceCap =
+    options.source === "wifi"
+      ? WIFI_SESSION_MAX_SECONDS
+      : REMOTE_SESSION_MAX_SECONDS;
 
-  let expiry = issuedAt + tierCap;
+  const requested = Math.max(60, Math.floor(options.maxAgeSeconds));
+  let expiry = issuedAt + Math.min(requested, sourceCap);
 
   if (options.notAfter) {
     const credentialExpiry = Math.floor(options.notAfter.getTime() / 1000);
@@ -149,6 +177,9 @@ export async function mintSession(options: MintOptions): Promise<MintedSession> 
     tenantId: options.tenantId,
     tenantSlug: options.tenantSlug,
     tenantName: options.tenantName,
+    source: options.source,
+    networkCidrs:
+      options.source === "wifi" ? [...(options.networkCidrs ?? [])] : undefined,
     iat: issuedAt,
     exp: expiry,
   };
@@ -172,6 +203,14 @@ export async function mintSession(options: MintOptions): Promise<MintedSession> 
 function isSessionPayload(value: unknown): value is SessionPayload {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Record<string, unknown>;
+  const sourceOk =
+    candidate.source === undefined ||
+    candidate.source === "wifi" ||
+    candidate.source === "remote";
+  const cidrsOk =
+    candidate.networkCidrs === undefined ||
+    (Array.isArray(candidate.networkCidrs) &&
+      candidate.networkCidrs.every((entry) => typeof entry === "string"));
   return (
     (candidate.tier === "guest" || candidate.tier === "lobby") &&
     typeof candidate.tenantId === "string" &&
@@ -179,7 +218,9 @@ function isSessionPayload(value: unknown): value is SessionPayload {
     typeof candidate.tenantSlug === "string" &&
     typeof candidate.tenantName === "string" &&
     typeof candidate.iat === "number" &&
-    typeof candidate.exp === "number"
+    typeof candidate.exp === "number" &&
+    sourceOk &&
+    cidrsOk
   );
 }
 
@@ -234,6 +275,13 @@ export async function verifySession(
   if (parsed.exp * 1000 <= now.getTime()) return null;
   if (expectedTier && parsed.tier !== expectedTier) return null;
 
+  // Cookies minted before on-network access had no `source` and a year-long
+  // lobby cap. Treat them as expired so a kiosk re-admits via Wi-Fi (or a
+  // short remote pass) instead of remaining signed in indefinitely.
+  if (!parsed.source && parsed.exp - parsed.iat > REMOTE_SESSION_MAX_SECONDS) {
+    return null;
+  }
+
   return parsed;
 }
 
@@ -249,4 +297,30 @@ export function sessionCookieOptions(maxAge: number) {
     path: "/",
     maxAge,
   };
+}
+
+/**
+ * A wifi session is only valid while the device is still on a prefix captured
+ * at mint time. Remote sessions are bound by expiry alone.
+ */
+export function sessionAllowedFromIp(
+  payload: SessionPayload,
+  ip: string | null
+): boolean {
+  const source = payload.source ?? "remote";
+  if (source !== "wifi") return true;
+  if (!ip) return false;
+  return ipInAnyCidr(ip, payload.networkCidrs);
+}
+
+/** Refresh a wifi cookie before it lapses so a hall screen does not drop overnight. */
+export function wifiSessionShouldRefresh(
+  payload: SessionPayload,
+  now: Date = new Date()
+): boolean {
+  if ((payload.source ?? "remote") !== "wifi") return false;
+  const ttl = payload.exp - payload.iat;
+  if (ttl <= 0) return false;
+  const remaining = payload.exp - Math.floor(now.getTime() / 1000);
+  return remaining < Math.min(30 * 60, Math.floor(ttl * 0.35));
 }

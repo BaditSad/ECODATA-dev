@@ -17,7 +17,7 @@ const serverSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(20),
   GUEST_SESSION_SECRET: z.string().min(32),
   SENSOR_API_KEY_PEPPER: z.string().min(32),
-  SUPER_ADMIN_EMAIL: z.string().email().default("brieuc@ecodatalink.com"),
+  SUPER_ADMIN_EMAIL: z.string().email().default("admin@ecodatalink.com"),
 });
 
 export type PublicEnv = z.infer<typeof publicSchema>;

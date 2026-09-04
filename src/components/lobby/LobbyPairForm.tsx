@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useMessages } from "@/i18n/LocaleProvider";
 
 /**
  * Lobby code entry.
@@ -13,6 +14,7 @@ import { useRouter } from "next/navigation";
  */
 export function LobbyPairForm() {
   const router = useRouter();
+  const t = useMessages().lobbyPair;
   const [code, setCode] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,6 +27,7 @@ export function LobbyPairForm() {
     try {
       const response = await fetch("/api/auth/verify-pin", {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code, tier: "lobby" }),
       });
@@ -41,7 +44,7 @@ export function LobbyPairForm() {
 
       setError(payload.message);
     } catch {
-      setError("Network unavailable. Check the screen's connection.");
+      setError(t.network);
     } finally {
       setPending(false);
     }
@@ -50,7 +53,7 @@ export function LobbyPairForm() {
   return (
     <form onSubmit={onSubmit}>
       <label className="block">
-        <span className="hud-eyebrow">Lobby code</span>
+        <span className="hud-eyebrow">{t.code}</span>
         <input
           value={code}
           onChange={(event) => setCode(event.target.value.toUpperCase())}
@@ -80,7 +83,7 @@ export function LobbyPairForm() {
           background: "var(--hud-accent-soft)",
         }}
       >
-        {pending ? "Pairing…" : "Pair display"}
+        {pending ? t.pairing : t.submit}
       </button>
     </form>
   );

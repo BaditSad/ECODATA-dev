@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Delete } from "lucide-react";
+import { useLocale } from "@/i18n/LocaleProvider";
 
 /**
  * Four-digit guest PIN entry.
@@ -20,6 +21,7 @@ const PIN_LENGTH = 4;
 
 export function PinPad({ redirectTo }: { redirectTo?: string }) {
   const router = useRouter();
+  const t = useLocale().messages.pin;
   const [digits, setDigits] = useState<string[]>([]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +46,7 @@ export function PinPad({ redirectTo }: { redirectTo?: string }) {
       try {
         const response = await fetch("/api/auth/verify-pin", {
           method: "POST",
+          credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ code, tier: "guest" }),
         });
@@ -63,14 +66,14 @@ export function PinPad({ redirectTo }: { redirectTo?: string }) {
         setShake(true);
         window.setTimeout(() => setShake(false), 400);
       } catch {
-        setError("Network unavailable. Please try again.");
+        setError(t.network);
         setDigits([]);
       } finally {
         setPending(false);
         submittingRef.current = false;
       }
     },
-    [router, safeRedirect]
+    [router, safeRedirect, t.network]
   );
 
   const push = useCallback(
@@ -113,7 +116,9 @@ export function PinPad({ redirectTo }: { redirectTo?: string }) {
         className={`flex justify-center gap-2.5 ${shake ? "animate-shake" : ""}`}
         role="status"
         aria-live="polite"
-        aria-label={`${digits.length} of ${PIN_LENGTH} digits entered`}
+        aria-label={t.digitsEntered
+          .replace("{n}", String(digits.length))
+          .replace("{total}", String(PIN_LENGTH))}
       >
         {Array.from({ length: PIN_LENGTH }, (_, index) => (
           <span
@@ -134,9 +139,7 @@ export function PinPad({ redirectTo }: { redirectTo?: string }) {
         style={error ? { color: "#f0a58a" } : undefined}
         role={error ? "alert" : undefined}
       >
-        {pending
-          ? "Checking your code…"
-          : (error ?? "Enter the four-digit code from your welcome card.")}
+        {pending ? t.checking : (error ?? t.hint)}
       </p>
 
       {/* ── Keypad ───────────────────────────────────────────────────────── */}
@@ -172,7 +175,7 @@ export function PinPad({ redirectTo }: { redirectTo?: string }) {
           onClick={pop}
           disabled={pending || digits.length === 0}
           className="pin-key"
-          aria-label="Delete last digit"
+          aria-label={t.deleteDigit}
         >
           <Delete size={18} aria-hidden />
         </button>

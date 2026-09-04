@@ -17,7 +17,35 @@ export type Json =
 
 /* ── Domain unions ───────────────────────────────────────────────────────── */
 
-export type StaffRole = "super_admin" | "resort_manager" | "csr_analyst";
+export type StaffRole =
+  | "super_admin"
+  | "platform_staff"
+  | "resort_manager"
+  | "csr_analyst";
+
+/** Roles that work across the estate rather than inside one resort. */
+export type PlatformRole = Extract<StaffRole, "super_admin" | "platform_staff">;
+
+/**
+ * ERP modules, mirrored by the `erp_module_access_known_module` constraint.
+ *
+ * `access` is absent on purpose: administering accounts is the owner's, and
+ * granting it would let a holder grant themselves everything else.
+ */
+export type ErpModuleKey =
+  | "overview"
+  | "domains"
+  | "contracts"
+  | "invoices"
+  | "accounting"
+  | "tickets"
+  | "incidents"
+  | "audio";
+
+export type ErpAccessLevel = "read" | "write";
+
+/** What `erp_access()` returns: a grant, or the absence of one. */
+export type ErpEffectiveAccess = ErpAccessLevel | "none";
 
 export type SubscriptionStatus =
   | "trial"
@@ -85,6 +113,30 @@ export type LobbyCameraMode = "orbit" | "flyover" | "static";
 
 export type AppLocale = "fr" | "en";
 
+export type BillingCycle = "monthly" | "quarterly" | "yearly";
+
+export type ContractStatus = "draft" | "active" | "ended" | "cancelled";
+
+export type InvoiceStatus = "draft" | "issued" | "paid" | "void";
+
+export type LedgerKind = "expense" | "adjustment";
+
+export type TicketStatus = "draft" | "waiting" | "in_progress" | "done" | "archived";
+
+export type TicketBoardColumn = Exclude<TicketStatus, "archived">;
+
+export type IncidentStatus =
+  | "open"
+  | "in_progress"
+  | "resolved"
+  | "closed"
+  | "suspended"
+  | "archived";
+
+export type TicketPriority = "low" | "normal" | "high" | "urgent";
+
+export type TicketDepartment = "it" | "commerce" | "marketing";
+
 /** Georeferencing envelope stored in `tenants.coordinates`. */
 export interface TenantCoordinates {
   lat: number;
@@ -124,6 +176,109 @@ export type TenantRow = {
   subscription_renews_at: string | null;
   sensor_quota: number;
   is_active: boolean;
+  suspended_at: string | null;
+  suspension_reason: string | null;
+  /** CIDR prefixes that admit guest/lobby views without a code. */
+  network_cidrs: string[];
+  on_network_hours: number;
+  remote_session_hours: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type RemoteAccessPassRow = {
+  id: string;
+  tenant_id: string;
+  tier: "guest" | "lobby";
+  token_hash: string;
+  label: string | null;
+  expires_at: string;
+  revoked_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  last_used_at: string | null;
+}
+
+export type ErpModuleAccessRow = {
+  profile_id: string;
+  module_key: ErpModuleKey;
+  access: ErpAccessLevel;
+  granted_by: string | null;
+  granted_at: string;
+}
+
+export type ContractRow = {
+  id: string;
+  tenant_id: string;
+  starts_on: string;
+  ends_on: string;
+  billing_cycle: BillingCycle;
+  amount_cents: number;
+  currency: string;
+  status: ContractStatus;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type InvoiceRow = {
+  id: string;
+  tenant_id: string;
+  contract_id: string | null;
+  number: string;
+  issued_on: string;
+  due_on: string;
+  amount_cents: number;
+  tax_cents: number;
+  currency: string;
+  status: InvoiceStatus;
+  paid_at: string | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type LedgerEntryRow = {
+  id: string;
+  tenant_id: string | null;
+  occurred_on: string;
+  kind: LedgerKind;
+  amount_cents: number;
+  currency: string;
+  memo: string;
+  created_by: string | null;
+  created_at: string;
+}
+
+export type WorkTicketRow = {
+  id: string;
+  department: TicketDepartment;
+  title: string;
+  description: string;
+  status: TicketStatus;
+  priority: TicketPriority;
+  assigned_to: string | null;
+  created_by: string | null;
+  source_incident_id: string | null;
+  completed_at: string | null;
+  archived_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type HotelIncidentRow = {
+  id: string;
+  tenant_id: string;
+  title: string;
+  description: string;
+  status: IncidentStatus;
+  priority: TicketPriority;
+  assigned_to: string | null;
+  created_by: string | null;
+  closed_at: string | null;
+  archived_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -312,6 +467,16 @@ export type VerifyLobbyCodeResult = {
   tenant_name: string;
 }
 
+export type MatchTenantByIpResult = {
+  tenant_id: string;
+  tenant_slug: string;
+  tenant_name: string;
+  network_cidrs: string[];
+  on_network_hours: number;
+  remote_session_hours: number;
+  match_prefix: number;
+}
+
 export type ApplySensorTelemetryResult = {
   detection_id: string | null;
   job_id: string | null;
@@ -430,6 +595,35 @@ export type LobbyDisplaySettingsUpsert = Pick<
   "tenant_id"
 > &
   Partial<Omit<LobbyDisplaySettingsRow, "tenant_id" | "updated_at">>;
+export type ErpModuleAccessUpsert = Pick<
+  ErpModuleAccessRow,
+  "profile_id" | "module_key" | "access"
+> &
+  Partial<Pick<ErpModuleAccessRow, "granted_by">>;
+export type ContractInsert = Insert<
+  ContractRow,
+  "tenant_id" | "starts_on" | "ends_on" | "amount_cents"
+>;
+export type InvoiceInsert = Insert<
+  InvoiceRow,
+  "tenant_id" | "number" | "due_on" | "amount_cents"
+>;
+export type LedgerEntryInsert = Insert<
+  LedgerEntryRow,
+  "kind" | "amount_cents" | "memo"
+>;
+export type WorkTicketInsert = Insert<
+  WorkTicketRow,
+  "department" | "title" | "description"
+>;
+export type HotelIncidentInsert = Insert<
+  HotelIncidentRow,
+  "tenant_id" | "title" | "description"
+>;
+export type RemoteAccessPassInsert = Insert<
+  RemoteAccessPassRow,
+  "tenant_id" | "tier" | "token_hash" | "expires_at"
+>;
 
 /* ── Supabase client generic ─────────────────────────────────────────────── */
 
@@ -488,6 +682,53 @@ export interface Database {
         Insert<TenantAccessCodeRow, "tenant_id" | "code" | "valid_until">,
         Partial<Insert<TenantAccessCodeRow, "tenant_id" | "code" | "valid_until">>,
         [Fk<"tenant_access_codes_tenant_id_fkey", "tenant_id", "tenants">]
+      >;
+      erp_module_access: TableDef<
+        ErpModuleAccessRow,
+        ErpModuleAccessUpsert,
+        Partial<ErpModuleAccessUpsert>,
+        [Fk<"erp_module_access_profile_id_fkey", "profile_id", "profiles">]
+      >;
+      contracts: TableDef<
+        ContractRow,
+        ContractInsert,
+        Partial<ContractInsert>,
+        [Fk<"contracts_tenant_id_fkey", "tenant_id", "tenants">]
+      >;
+      invoices: TableDef<
+        InvoiceRow,
+        InvoiceInsert,
+        Partial<InvoiceInsert>,
+        [
+          Fk<"invoices_tenant_id_fkey", "tenant_id", "tenants">,
+          Fk<"invoices_contract_id_fkey", "contract_id", "contracts">,
+        ]
+      >;
+      ledger_entries: TableDef<
+        LedgerEntryRow,
+        LedgerEntryInsert,
+        Partial<LedgerEntryInsert>,
+        [Fk<"ledger_entries_tenant_id_fkey", "tenant_id", "tenants">]
+      >;
+      work_tickets: TableDef<
+        WorkTicketRow,
+        WorkTicketInsert,
+        Partial<WorkTicketInsert>,
+        [
+          Fk<"work_tickets_assigned_to_fkey", "assigned_to", "profiles">,
+          Fk<"work_tickets_created_by_fkey", "created_by", "profiles">,
+          Fk<"work_tickets_source_incident_id_fkey", "source_incident_id", "hotel_incidents">,
+        ]
+      >;
+      hotel_incidents: TableDef<
+        HotelIncidentRow,
+        HotelIncidentInsert,
+        Partial<HotelIncidentInsert>,
+        [
+          Fk<"hotel_incidents_tenant_id_fkey", "tenant_id", "tenants">,
+          Fk<"hotel_incidents_assigned_to_fkey", "assigned_to", "profiles">,
+          Fk<"hotel_incidents_created_by_fkey", "created_by", "profiles">,
+        ]
       >;
       species_profiles: TableDef<SpeciesProfileRow, SpeciesProfileInsert>;
       audio_detections: TableDef<
@@ -551,6 +792,15 @@ export interface Database {
         GuestPinAttemptRow,
         Insert<GuestPinAttemptRow, "fingerprint_hash" | "succeeded">
       >;
+      remote_access_passes: TableDef<
+        RemoteAccessPassRow,
+        RemoteAccessPassInsert,
+        Partial<RemoteAccessPassInsert>,
+        [
+          Fk<"remote_access_passes_tenant_id_fkey", "tenant_id", "tenants">,
+          Fk<"remote_access_passes_created_by_fkey", "created_by", "profiles">,
+        ]
+      >;
     };
     Views: {
       tenant_fleet_overview: {
@@ -574,6 +824,10 @@ export interface Database {
       verify_lobby_code: {
         Args: { input_code: string };
         Returns: VerifyLobbyCodeResult[];
+      };
+      match_tenant_by_ip: {
+        Args: { client_ip: string };
+        Returns: MatchTenantByIpResult[];
       };
       rotate_tenant_access_code: {
         Args: {
@@ -634,6 +888,15 @@ export interface Database {
       app_role: { Args: Record<never, never>; Returns: StaffRole | null };
       app_tenant_id: { Args: Record<never, never>; Returns: string | null };
       is_super_admin: { Args: Record<never, never>; Returns: boolean };
+      is_platform_member: { Args: Record<never, never>; Returns: boolean };
+      erp_access: {
+        Args: { target_module: ErpModuleKey };
+        Returns: ErpEffectiveAccess;
+      };
+      erp_can: {
+        Args: { target_module: ErpModuleKey; needed?: ErpAccessLevel };
+        Returns: boolean;
+      };
     };
     Enums: Record<never, never>;
     CompositeTypes: Record<never, never>;

@@ -1,93 +1,83 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { fetchEstateOverview } from "@/lib/data/admin";
+import { requireModule } from "@/lib/auth/erp";
+import { fetchEstateSnapshot } from "@/modules/overview/data";
 import {
   Card,
   CardHeader,
-  Cell,
   EmptyState,
   Metric,
   MetricRow,
   Page,
   PageHeader,
-  Row,
   Status,
-  Table,
   TYPE,
 } from "@/components/console/ui";
-import {
-  batteryTone,
-  formatDateTime,
-  formatNumber,
-  formatPercent,
-  formatRelative,
-  isPingStale,
-  SUBSCRIPTION_LABEL,
-  subscriptionTone,
-} from "@/lib/format";
+import { formatNumber, formatPercent } from "@/lib/format";
 import { estimateKeyspacePressure } from "@/lib/pin-engine";
+import { messages } from "@/i18n/server";
+import { fill } from "@/i18n/console";
 
-export const metadata: Metadata = { title: "Estate" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: messages().modules.overview.label };
+}
 
 // Fleet health is only meaningful live; a cached page would show a resort as
 // healthy minutes after it went dark.
 export const dynamic = "force-dynamic";
 
-export default async function AdminOverviewPage() {
-  const estate = await fetchEstateOverview();
-  const now = Date.now();
+export default async function OverviewPage() {
+  await requireModule("overview");
 
-  const totals = estate.reduce(
-    (acc, row) => {
-      acc.sensors += row.sensors_total;
-      acc.active += row.sensors_active;
-      acc.degraded += row.sensors_degraded;
-      acc.offline += row.sensors_offline;
-      acc.detections24h += row.detections?.detections_24h ?? 0;
-      acc.awaitingReview += row.detections?.awaiting_review ?? 0;
-      if (row.is_active) acc.liveTenants += 1;
-      return acc;
-    },
-    {
-      sensors: 0,
-      active: 0,
-      degraded: 0,
-      offline: 0,
-      detections24h: 0,
-      awaitingReview: 0,
-      liveTenants: 0,
-    }
-  );
+  const now = Date.now();
+  const { summary, attention } = await fetchEstateSnapshot(now);
+  const copy = messages();
 
   // Two codes are live per resort during the two-week rollover overlap, so the
   // worst-case draw on the shared 4-digit keyspace is twice the tenant count.
-  const keyspace = estimateKeyspacePressure(totals.liveTenants * 2);
+  const keyspace = estimateKeyspacePressure(summary.domainsLive * 2);
 
   const fleetHealth =
-    totals.sensors === 0 ? null : totals.active / totals.sensors;
+    summary.sensorsTotal === 0
+      ? null
+      : summary.sensorsActive / summary.sensorsTotal;
 
   return (
     <Page>
-      <PageHeader
-        title="Estate overview"
-        purpose="Every contracted resort, its listening fleet and its bioacoustic yield over the last 24 hours."
-      />
+      <PageHeader title={copy.modules.overview.label} purpose={copy.modules.overview.purpose}>
+        <Link href="/admin/domains/new" className="console-btn-primary">
+          {copy.overview.onboard}
+        </Link>
+      </PageHeader>
 
       <MetricRow>
         <Metric
-          label="Resorts live"
-          value={formatNumber(totals.liveTenants)}
-          hint={`${estate.length} onboarded`}
+          label={copy.overview.domainsLive}
+          value={formatNumber(summary.domainsLive)}
+          hint={fill(copy.overview.domainsLiveHint, {
+            total: summary.domainsTotal,
+            trial: summary.domainsTrial,
+          })}
         />
         <Metric
-          label="Balises deployed"
-          value={formatNumber(totals.sensors)}
-          hint={`${totals.active} active · ${totals.degraded} degraded · ${totals.offline} offline`}
+          label={copy.overview.suspended}
+          value={formatNumber(summary.domainsSuspended)}
+          hint={copy.overview.suspendedHint}
+          tone={summary.domainsSuspended > 0 ? "critical" : "positive"}
         />
         <Metric
-          label="Fleet health"
+          label={copy.overview.balises}
+          value={formatNumber(summary.sensorsTotal)}
+          hint={fill(copy.overview.balisesHint, {
+            active: summary.sensorsActive,
+            degraded: summary.sensorsDegraded,
+            offline: summary.sensorsOffline,
+          })}
+        />
+        <Metric
+          label={copy.overview.fleetHealth}
           value={formatPercent(fleetHealth)}
-          hint="Share of units reporting normally"
+          hint={copy.overview.fleetHealthHint}
           tone={
             fleetHealth === null
               ? "neutral"
@@ -99,141 +89,54 @@ export default async function AdminOverviewPage() {
           }
         />
         <Metric
-          label="Detections · 24 h"
-          value={formatNumber(totals.detections24h)}
-          hint={`${formatNumber(totals.awaitingReview)} awaiting review`}
-        />
-        <Metric
-          label="PIN keyspace"
-          value={formatPercent(keyspace.utilization, 1)}
-          hint={`${formatNumber(keyspace.used)} of ${formatNumber(keyspace.capacity)} 4-digit codes`}
-          tone={
-            keyspace.severity === "ok"
-              ? "positive"
-              : keyspace.severity === "watch"
-                ? "attention"
-                : "critical"
-          }
+          label={copy.overview.detections24h}
+          value={formatNumber(summary.detections24h)}
+          hint={fill(copy.overview.awaitingReview, {
+            n: formatNumber(summary.awaitingReview),
+          })}
         />
       </MetricRow>
 
       <Card>
-        <CardHeader
-          title="Resorts"
-          hint="Select a resort to provision hardware, manage its twin asset and review access codes."
-        />
+        <CardHeader title={copy.overview.attention} hint={copy.overview.attentionHint} />
 
-        {estate.length === 0 ? (
+        {attention.length === 0 ? (
           <EmptyState
-            title="No resorts onboarded yet"
-            detail="Create the first tenant to begin provisioning balises and uploading a digital twin. Onboarding issues the resort's lobby code and its first guest PIN cycle."
+            title={copy.overview.nothingTitle}
+            detail={copy.overview.nothingDetail}
           />
         ) : (
-          <Table
-            head={[
-              "Resort",
-              "Subscription",
-              "Fleet",
-              "Lowest battery",
-              "Last ping",
-              "Detections 24 h",
-              "Species 30 d",
-              "Mean confidence",
-            ]}
-          >
-            {estate.map((row) => {
-              const stale = isPingStale(row.last_ping, now);
-              const fleetTone =
-                row.sensors_offline > 0
-                  ? "critical"
-                  : row.sensors_degraded > 0
-                    ? "attention"
-                    : "positive";
-
-              return (
-                <Row key={row.tenant_id}>
-                  <Cell>
-                    <Link
-                      href={`/admin/clients/${row.tenant_id}`}
-                      className="font-medium text-[var(--edl-text)] underline-offset-2 hover:underline"
-                    >
-                      {row.tenant_name}
-                    </Link>
-                    <span className={`ml-2 ${TYPE.meta}`}>{row.tenant_slug}</span>
-                  </Cell>
-
-                  <Cell>
-                    <Status
-                      tone={subscriptionTone(row.subscription_status)}
-                      label={SUBSCRIPTION_LABEL[row.subscription_status]}
-                    />
-                  </Cell>
-
-                  <Cell>
-                    <Status
-                      tone={fleetTone}
-                      label={`${row.sensors_active}/${row.sensors_total} active`}
-                    />
-                  </Cell>
-
-                  <Cell align="right">
-                    <Status
-                      tone={batteryTone(row.battery_min)}
-                      label={
-                        row.battery_min === null ? "—" : `${row.battery_min}%`
-                      }
-                      className="justify-end"
-                    />
-                  </Cell>
-
-                  <Cell align="right">
-                    <span style={stale ? { color: "var(--edl-danger)" } : undefined}>
-                      {formatRelative(row.last_ping, now)}
-                    </span>
-                  </Cell>
-
-                  <Cell align="right">
-                    {formatNumber(row.detections?.detections_24h ?? 0)}
-                  </Cell>
-
-                  <Cell align="right">
-                    {formatNumber(row.detections?.species_30d ?? 0)}
-                  </Cell>
-
-                  <Cell align="right">
-                    {formatPercent(row.detections?.confidence_avg_7d ?? null, 1)}
-                  </Cell>
-                </Row>
-              );
-            })}
-          </Table>
+          <ul className="divide-y divide-[var(--edl-border)]">
+            {attention.map((item, index) => (
+              <li
+                key={`${item.tenantId}-${index}`}
+                className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3"
+              >
+                <Link
+                  href={item.href ?? `/admin/domains/${item.tenantId}`}
+                  className="min-w-[160px] font-sans text-[12px] font-medium text-[var(--edl-text)] underline-offset-2 hover:underline"
+                >
+                  {item.tenantName}
+                </Link>
+                <Status tone={item.tone} label={item.headline} />
+                <span className={`${TYPE.meta} flex-1`}>{item.detail}</span>
+              </li>
+            ))}
+          </ul>
         )}
       </Card>
 
       <Card>
-        <CardHeader
-          title="Access code rotation"
-          hint="Guest PINs are issued on a 28-day cadence with 42-day validity, giving every rollover a 14-day overlap."
-        />
+        <CardHeader title={copy.overview.keyspace} hint={copy.overview.keyspaceHint} />
         <div className="px-4 py-3.5">
-          <p className={TYPE.body}>
-            Because <code className="font-mono text-[11px]">verify_guest_pin</code>{" "}
-            receives four digits and no tenant hint, a live PIN must resolve to
-            exactly one resort. The database enforces that with an exclusion
-            constraint over{" "}
-            <code className="font-mono text-[11px]">(code, validity range)</code>,
-            so an ambiguous code cannot be written even if application code tried.
-          </p>
+          <p className={TYPE.body}>{copy.overview.keyspaceBody1}</p>
           <p className={`mt-2 ${TYPE.meta}`}>
-            That makes the 4-digit format a real capacity limit: roughly{" "}
-            {formatNumber(Math.floor(keyspace.capacity / 2))} concurrent resorts.
-            Current draw is {formatPercent(keyspace.utilization, 1)}.
-            {keyspace.severity !== "ok"
-              ? " Plan a migration to 5 digits or tenant-scoped PINs before this saturates."
-              : ""}
-          </p>
-          <p className={`mt-2 ${TYPE.meta}`}>
-            Generated {formatDateTime(new Date().toISOString())}.
+            {fill(copy.overview.keyspaceBody2, {
+              domains: formatNumber(Math.floor(keyspace.capacity / 2)),
+              util: formatPercent(keyspace.utilization, 1),
+              capacity: formatNumber(keyspace.capacity),
+            })}
+            {keyspace.severity !== "ok" ? copy.overview.keyspacePlan : ""}
           </p>
         </div>
       </Card>

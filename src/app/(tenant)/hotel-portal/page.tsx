@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { requireStaff, canEditTenantSettings } from "@/lib/auth/guards";
 import { fetchPortalSnapshot, fetchTnfdReportData } from "@/lib/data/tenant";
 import { createReadOnlyServerSupabase } from "@/lib/supabase/server";
@@ -17,6 +18,11 @@ import {
   TYPE,
 } from "@/components/console/ui";
 import { LobbyControls } from "@/components/portal/LobbyControls";
+import { NetworkAccess } from "@/components/portal/NetworkAccess";
+import { ReportIncidentForm } from "@/components/portal/ReportIncidentForm";
+import { fetchIncidentsForTenant } from "@/modules/incidents/data";
+import { clientIpFromHeaders } from "@/lib/auth/client-ip";
+import { suggestCidr } from "@/lib/auth/cidr";
 import {
   batteryTone,
   confidenceTone,
@@ -29,6 +35,10 @@ import {
   SENSOR_STATUS_LABEL,
   sensorStatusTone,
   signalLabel,
+  INCIDENT_STATUS_LABEL,
+  TICKET_PRIORITY_LABEL,
+  incidentStatusTone,
+  ticketPriorityTone,
 } from "@/lib/format";
 import type { SpeciesProfileRow } from "@/types/database";
 
@@ -57,7 +67,7 @@ export default async function HotelPortalPage({
   const periodEnd = new Date();
   const periodStart = new Date(periodEnd.getTime() - periodDays * 86_400_000);
 
-  const [snapshot, report, speciesCatalogue] = await Promise.all([
+  const [snapshot, report, speciesCatalogue, incidents] = await Promise.all([
     fetchPortalSnapshot(staff.tenantId),
     fetchTnfdReportData({ tenantId: staff.tenantId, periodStart, periodEnd }),
     createReadOnlyServerSupabase()
@@ -65,11 +75,14 @@ export default async function HotelPortalPage({
       .select("*")
       .order("common_name_en", { ascending: true })
       .limit(200),
+    fetchIncidentsForTenant(staff.tenantId),
   ]);
 
   const now = Date.now();
   const canEdit = canEditTenantSettings(staff.role);
   const species: SpeciesProfileRow[] = speciesCatalogue.data ?? [];
+  const seenIp = clientIpFromHeaders(headers());
+  const suggestedCidr = seenIp ? suggestCidr(seenIp) : null;
 
   const needsAttention = snapshot.sensors.filter(
     (sensor) =>
@@ -82,7 +95,7 @@ export default async function HotelPortalPage({
     <Page>
       <PageHeader
         title={snapshot.tenant.name}
-        purpose="Listening network health, guest access codes, hall display control and TNFD disclosure evidence."
+        purpose="Listening network health, Wi-Fi guest access, hall display control and TNFD disclosure evidence."
       />
 
       <MetricRow>
@@ -131,13 +144,13 @@ export default async function HotelPortalPage({
       <Card>
         <CardHeader
           title="Guest access codes"
-          hint="Give arriving guests the code that expires latest. During a rollover both codes work, so a guest who already has the older one is never turned away."
+          hint="Give arriving guests the code that expires latest — they only need it off the hotel Wi-Fi. During a rollover both codes work, so a guest who already has the older one is never turned away."
         />
         <div className="px-4 py-1">
           {snapshot.activeCodes.length === 0 ? (
             <p className="py-6 text-center font-sans text-[12px]" style={{ color: "var(--edl-danger)" }}>
-              No guest code is currently live. Contact platform support — guests
-              cannot sign in until a code is issued.
+              No guest PIN is currently live. Guests on hotel Wi-Fi still get in;
+              off-site visitors need a remote link until a code is issued.
             </p>
           ) : (
             snapshot.activeCodes.map((code, index) => (
@@ -156,11 +169,66 @@ export default async function HotelPortalPage({
           )}
           <SpecRow
             label="Lobby display code"
-            hint="Permanent. Used once per screen when pairing."
+            hint="Permanent. Used off-site or if Wi-Fi prefixes are not registered."
             value={snapshot.tenant.master_lobby_code}
             mono
           />
         </div>
+      </Card>
+
+      {/* ── On-network access ─────────────────────────────────────────────── */}
+      <Card>
+        <CardHeader
+          title="Hotel Wi-Fi access"
+          hint="On a registered prefix, guests and hall screens open without a code. Off-site sessions expire after the window below."
+        />
+        <NetworkAccess
+          cidrs={snapshot.tenant.network_cidrs ?? []}
+          onNetworkHours={snapshot.tenant.on_network_hours}
+          remoteSessionHours={snapshot.tenant.remote_session_hours}
+          seenIp={seenIp}
+          suggestedCidr={suggestedCidr}
+          passes={snapshot.remotePasses}
+          canEdit={canEdit}
+        />
+      </Card>
+
+      {/* ── Incidents ─────────────────────────────────────────────────────── */}
+      <Card>
+        <CardHeader
+          title="Support incidents"
+          hint="Report something that needs Eco-Data Link. Priority helps us pick up the urgent ones first."
+        />
+        <ReportIncidentForm />
+        {incidents.length > 0 ? (
+          <Table head={["Incident", "Priority", "Status", "Opened"]}>
+            {incidents.map((incident) => (
+              <Row key={incident.id}>
+                <Cell>
+                  <span className="font-medium text-[var(--edl-text)]">
+                    {incident.title}
+                  </span>
+                  <p className={`mt-0.5 line-clamp-2 ${TYPE.meta}`}>
+                    {incident.description}
+                  </p>
+                </Cell>
+                <Cell>
+                  <Status
+                    tone={ticketPriorityTone(incident.priority)}
+                    label={TICKET_PRIORITY_LABEL[incident.priority]}
+                  />
+                </Cell>
+                <Cell>
+                  <Status
+                    tone={incidentStatusTone(incident.status)}
+                    label={INCIDENT_STATUS_LABEL[incident.status]}
+                  />
+                </Cell>
+                <Cell align="right">{formatDateTime(incident.created_at)}</Cell>
+              </Row>
+            ))}
+          </Table>
+        ) : null}
       </Card>
 
       {/* ── Fleet ─────────────────────────────────────────────────────────── */}

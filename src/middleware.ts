@@ -1,10 +1,20 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
+import { requestClientIp } from "@/lib/auth/client-ip";
 import {
   GUEST_COOKIE,
   LOBBY_COOKIE,
+  cookieNameFor,
+  mintSession,
+  sessionAllowedFromIp,
+  sessionCookieOptions,
   verifySession,
+  wifiSessionShouldRefresh,
+  type AccessTier,
+  type SessionPayload,
 } from "@/lib/auth/session";
+import { isPlatformPath, surfaceForHost } from "@/lib/surface";
+import { isPlatformRole } from "@/lib/auth/roles";
 
 /**
  * Edge guard for all four access tiers.
@@ -28,36 +38,132 @@ function redirect(request: NextRequest, pathname: string, from?: string) {
   return NextResponse.redirect(url);
 }
 
+function clearTierCookie(response: NextResponse, tier: AccessTier) {
+  response.cookies.set(cookieNameFor(tier), "", sessionCookieOptions(0));
+  return response;
+}
+
+async function liveSession(
+  request: NextRequest,
+  cookieValue: string | undefined,
+  tier: AccessTier
+): Promise<{ payload: SessionPayload | null; refresh: SessionPayload | null }> {
+  const payload = await verifySession(cookieValue, tier);
+  if (!payload) return { payload: null, refresh: null };
+
+  const ip = requestClientIp(request);
+  if (!sessionAllowedFromIp(payload, ip)) {
+    return { payload: null, refresh: null };
+  }
+
+  if (wifiSessionShouldRefresh(payload)) {
+    return { payload, refresh: payload };
+  }
+
+  return { payload, refresh: null };
+}
+
+async function withWifiRefresh(
+  response: NextResponse,
+  payload: SessionPayload,
+  tier: AccessTier
+): Promise<NextResponse> {
+  const reminted = await mintSession({
+    tier,
+    tenantId: payload.tenantId,
+    tenantSlug: payload.tenantSlug,
+    tenantName: payload.tenantName,
+    source: "wifi",
+    networkCidrs: payload.networkCidrs,
+    maxAgeSeconds: payload.exp - payload.iat,
+  });
+  response.cookies.set(
+    cookieNameFor(tier),
+    reminted.token,
+    sessionCookieOptions(reminted.maxAge)
+  );
+  return response;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const surface = surfaceForHost(request.headers.get("host"));
 
-  // ── Guest tier: rotating 4-digit PIN ──────────────────────────────────────
+  // ── Origin split: platform console vs resort surfaces ─────────────────────
+  // Each origin serves only its own console. Bouncing the other one's routes
+  // here, before any session is even loaded, is what makes the separation
+  // real: /admin does not exist on a resort origin, so there is nothing there
+  // for a guest to find and nothing for a future route to accidentally expose.
+  if (surface === "admin") {
+    if (!isPlatformPath(pathname) && pathname !== SIGN_IN) {
+      return redirect(request, "/admin");
+    }
+  } else if (isPlatformPath(pathname)) {
+    return redirect(request, SIGN_IN);
+  }
+
+  // ── Guest tier: hotel Wi-Fi, remote pass, or rotating PIN ─────────────────
   if (pathname.startsWith("/client")) {
-    const session = await verifySession(
+    const { payload, refresh } = await liveSession(
+      request,
       request.cookies.get(GUEST_COOKIE)?.value,
       "guest"
     );
 
     if (pathname === PIN_ENTRY) {
-      // Already authenticated: skip the pad rather than asking again.
-      return session ? redirect(request, "/client") : NextResponse.next();
+      if (!payload) {
+        const bounce = NextResponse.next();
+        if (request.cookies.get(GUEST_COOKIE)?.value) {
+          clearTierCookie(bounce, "guest");
+        }
+        return bounce;
+      }
+      const destination = redirect(request, "/client");
+      return refresh ? withWifiRefresh(destination, refresh, "guest") : destination;
     }
 
-    return session ? NextResponse.next() : redirect(request, PIN_ENTRY, pathname);
+    if (!payload) {
+      const bounce = redirect(request, PIN_ENTRY, pathname);
+      if (request.cookies.get(GUEST_COOKIE)?.value) {
+        clearTierCookie(bounce, "guest");
+      }
+      return bounce;
+    }
+
+    const next = NextResponse.next();
+    return refresh ? withWifiRefresh(next, refresh, "guest") : next;
   }
 
-  // ── Lobby tier: permanent kiosk code ──────────────────────────────────────
+  // ── Lobby tier: hotel Wi-Fi, remote pass, or kiosk code ───────────────────
   if (pathname.startsWith("/lobby")) {
-    const session = await verifySession(
+    const { payload, refresh } = await liveSession(
+      request,
       request.cookies.get(LOBBY_COOKIE)?.value,
       "lobby"
     );
 
     if (pathname === LOBBY_ENTRY) {
-      return session ? redirect(request, "/lobby") : NextResponse.next();
+      if (!payload) {
+        const bounce = NextResponse.next();
+        if (request.cookies.get(LOBBY_COOKIE)?.value) {
+          clearTierCookie(bounce, "lobby");
+        }
+        return bounce;
+      }
+      const destination = redirect(request, "/lobby");
+      return refresh ? withWifiRefresh(destination, refresh, "lobby") : destination;
     }
 
-    return session ? NextResponse.next() : redirect(request, LOBBY_ENTRY, pathname);
+    if (!payload) {
+      const bounce = redirect(request, LOBBY_ENTRY, pathname);
+      if (request.cookies.get(LOBBY_COOKIE)?.value) {
+        clearTierCookie(bounce, "lobby");
+      }
+      return bounce;
+    }
+
+    const next = NextResponse.next();
+    return refresh ? withWifiRefresh(next, refresh, "lobby") : next;
   }
 
   // ── Staff tiers: Supabase email/password ──────────────────────────────────
@@ -74,26 +180,32 @@ export async function middleware(request: NextRequest) {
 
   if (pathname === SIGN_IN) {
     if (!staff) return response;
-    return redirect(
-      request,
-      staff.role === "super_admin" ? "/admin" : "/hotel-portal"
-    );
+
+    if (isPlatformRole(staff.role)) {
+      // On a resort origin there is no destination for platform staff, and
+      // sending them to /admin would bounce straight back here. The page stays
+      // put instead and names the console they want.
+      return surface === "admin" ? redirect(request, "/admin") : response;
+    }
+
+    return redirect(request, "/hotel-portal");
   }
 
   if (!staff) {
     return redirect(request, SIGN_IN, pathname);
   }
 
-  if (isAdminRoute && staff.role !== "super_admin") {
+  if (isAdminRoute && !isPlatformRole(staff.role)) {
     // A resort employee who lands on /admin is sent to their own console
-    // rather than shown a 403 they can do nothing about.
+    // rather than shown a 403 they can do nothing about. Which ERP modules a
+    // platform account may open is decided per module, not here.
     return redirect(request, "/hotel-portal");
   }
 
   if (isPortalRoute) {
-    // A super admin has no tenant of their own, so the portal has nothing to
-    // show them; the estate view is where they belong.
-    if (staff.role === "super_admin") return redirect(request, "/admin");
+    // Platform staff have no tenant of their own, so the portal has nothing to
+    // show them; the ERP is where they belong.
+    if (isPlatformRole(staff.role)) return redirect(request, "/admin");
     if (!staff.tenantId) return redirect(request, SIGN_IN);
   }
 

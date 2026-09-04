@@ -2,9 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { clientIpFrom, fingerprintRequest } from "@/lib/auth/sensor-keys";
+import { requestClientIp } from "@/lib/auth/client-ip";
+import { ipInAnyCidr } from "@/lib/auth/cidr";
+import { loadTenantForAccess, mintAccessSession } from "@/lib/auth/network";
 import {
   cookieNameFor,
-  mintSession,
   sessionCookieOptions,
   type AccessTier,
 } from "@/lib/auth/session";
@@ -182,11 +184,36 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const session = await mintSession({
+  let tenant;
+  try {
+    tenant = await loadTenantForAccess(resolved.tenantId);
+  } catch {
+    return settle(
+      startedAt,
+      apiError("internal_error", "Verification is unavailable. Try again shortly.", 503)
+    );
+  }
+
+  if (!tenant) {
+    return settle(
+      startedAt,
+      apiError(
+        tier === "guest" ? "invalid_pin" : "invalid_lobby_code",
+        GENERIC_CODE_REJECTION,
+        401
+      )
+    );
+  }
+
+  const onHotelNetwork = ipInAnyCidr(
+    requestClientIp(request) ?? "",
+    tenant.network_cidrs
+  );
+
+  const session = await mintAccessSession({
+    tenant,
     tier,
-    tenantId: resolved.tenantId,
-    tenantSlug: resolved.tenantSlug,
-    tenantName: resolved.tenantName,
+    source: onHotelNetwork ? "wifi" : "remote",
     notAfter: resolved.notAfter,
   });
 

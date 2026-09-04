@@ -13,7 +13,8 @@ import type { Database } from "@/types/database";
  *   2. The guest/lobby data layer — guests have no `auth.users` row either.
  *      `src/lib/data/guest.ts` is the only module allowed to use it there, and
  *      every query it issues is pinned to a tenant id taken from a *verified*
- *      session cookie.
+ *      session cookie. PIN verification and `/api/auth/presence` (Wi-Fi admit
+ *      and remote-pass redemption) use the same client for the same reason.
  *   3. Platform automation — PIN rotation, sensor provisioning.
  *
  * Because RLS is inert here, tenant scoping becomes a code invariant. Never

@@ -24,6 +24,8 @@ export type ApiErrorCode =
   | "invalid_pin"
   | "pin_expired"
   | "invalid_lobby_code"
+  | "invalid_remote_pass"
+  | "not_on_network"
   | "method_not_allowed";
 
 export interface ApiErrorBody {

@@ -1,69 +1,53 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireSuperAdmin } from "@/lib/auth/guards";
+import { requireErpSession, visibleModules } from "@/lib/auth/erp";
+import { ModuleNav } from "@/components/erp/ModuleNav";
+import { ErpSidebarFooter } from "@/components/erp/ErpSidebarFooter";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { TYPE } from "@/components/console/ui";
 
 /**
- * Super-admin shell.
+ * ERP shell.
  *
- * The guard runs here, above every `/admin` page, so no page can be reached
- * without it — including ones added later. Middleware already rejected the
- * obvious cases; this is the authoritative check, co-located with the data.
+ * Establishes the session above every `/admin` page, so no page can be reached
+ * without one — including ones added later. It does *not* authorise the module
+ * being rendered: that belongs to the page and its actions, because a shell
+ * check cannot know which module a Server Action is about to write to.
  */
 
-export const metadata: Metadata = { title: "Platform" };
-
-const NAV = [
-  { href: "/admin", label: "Estate" },
-  { href: "/admin/analytics/audio", label: "Audio & AI" },
-] as const;
+export const metadata: Metadata = { title: "Eco-Data Link ERP" };
 
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const admin = await requireSuperAdmin();
+  const session = await requireErpSession();
+  const allowed = visibleModules(session).map((module) => module.key);
 
   return (
-    <div className="console-root min-h-screen">
-      <header className="sticky top-0 z-20 border-b border-[var(--edl-border)] bg-[var(--edl-bg)]/95 backdrop-blur">
-        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3">
-          <Link href="/admin" className="flex items-baseline gap-2">
-            <span className="font-sans text-[13px] font-semibold tracking-[-0.01em] text-[var(--edl-text)]">
-              Eco-Data Link
-            </span>
-            <span className={TYPE.eyebrow}>Platform</span>
-          </Link>
-
-          <nav className="flex items-center gap-1" aria-label="Platform sections">
-            {NAV.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="rounded-md px-2.5 py-1 font-sans text-[12px] text-[var(--edl-muted)] transition-colors hover:bg-[var(--edl-soft)] hover:text-[var(--edl-text)]"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-
-          <div className="ml-auto flex items-center gap-3">
-            <span className={TYPE.meta}>{admin.email}</span>
-            <span
-              className="rounded-md px-2 py-0.5 font-sans text-[10px] font-medium uppercase tracking-[0.11em]"
-              style={{
-                background: "var(--edl-emerald-10)",
-                color: "var(--edl-emerald)",
-              }}
-            >
-              Super admin
-            </span>
+    <div className="console-root min-h-screen md:flex">
+      <aside className="border-b border-[var(--edl-border)] bg-[var(--edl-soft)]/40 md:sticky md:top-0 md:h-screen md:w-[196px] md:shrink-0 md:border-b-0 md:border-r">
+        <div className="flex h-full flex-col gap-4 overflow-x-auto px-3 py-3 md:overflow-x-visible md:py-4">
+          <div className="flex items-start justify-between gap-2 px-2.5">
+            <Link href="/admin" className="flex flex-col gap-0.5">
+              <span className="font-sans text-[13px] font-semibold tracking-[-0.01em] text-[var(--edl-text)]">
+                Eco-Data Link
+              </span>
+              <span className={TYPE.eyebrow}>ERP</span>
+            </Link>
+            <LanguageSwitcher variant="console" className="shrink-0 md:hidden" />
           </div>
-        </div>
-      </header>
 
-      <main className="mx-auto max-w-[1600px] px-5 py-6">{children}</main>
+          <ModuleNav allowed={allowed} />
+
+          <ErpSidebarFooter email={session.email} isOwner={session.isOwner} />
+        </div>
+      </aside>
+
+      <main className="min-w-0 flex-1 px-5 py-6">
+        <div className="mx-auto max-w-[1440px]">{children}</div>
+      </main>
     </div>
   );
 }

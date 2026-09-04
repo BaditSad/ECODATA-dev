@@ -1,8 +1,12 @@
 "use server";
 
+import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { canEditTenantSettings, requireStaff } from "@/lib/auth/guards";
+import { canonicalCidr, generateRemotePassToken } from "@/lib/auth/network";
+import { suggestCidr } from "@/lib/auth/cidr";
+import { clientIpFromHeaders } from "@/lib/auth/client-ip";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 /**
@@ -17,6 +21,8 @@ import { createServerSupabase } from "@/lib/supabase/server";
 export interface ActionResult {
   ok: boolean;
   message: string;
+  remoteUrl?: string;
+  remoteExpiresAt?: string;
 }
 
 const lobbySettingsSchema = z.object({
@@ -149,4 +155,238 @@ export async function reviewDetection(
         ? "Detection rejected. It is now excluded from guest views and TNFD evidence."
         : "Detection confirmed.",
   };
+}
+
+async function requireManager() {
+  const staff = await requireStaff();
+  if (!canEditTenantSettings(staff.role)) {
+    return {
+      staff: null,
+      error: {
+        ok: false as const,
+        message: "Network access is managed by the resort manager.",
+      },
+    };
+  }
+  return { staff, error: null };
+}
+
+function requestOrigin(): string {
+  const headerList = headers();
+  const host =
+    headerList.get("x-forwarded-host") ?? headerList.get("host") ?? "localhost:3001";
+  const proto = headerList.get("x-forwarded-proto") ?? "http";
+  return `${proto}://${host}`;
+}
+
+const hoursSchema = z.object({
+  onNetworkHours: z.coerce.number().int().min(1).max(24),
+  remoteSessionHours: z.coerce.number().int().min(1).max(12),
+});
+
+export async function updateAccessWindows(formData: FormData): Promise<ActionResult> {
+  const { staff, error } = await requireManager();
+  if (error || !staff) return error;
+
+  const parsed = hoursSchema.safeParse({
+    onNetworkHours: formData.get("onNetworkHours"),
+    remoteSessionHours: formData.get("remoteSessionHours"),
+  });
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.issues[0]?.message ?? "Invalid windows." };
+  }
+
+  const supabase = createServerSupabase();
+  const { error: writeError } = await supabase
+    .from("tenants")
+    .update({
+      on_network_hours: parsed.data.onNetworkHours,
+      remote_session_hours: parsed.data.remoteSessionHours,
+    })
+    .eq("id", staff.tenantId);
+
+  if (writeError) {
+    return { ok: false, message: `Could not save access windows: ${writeError.message}` };
+  }
+
+  revalidatePath("/hotel-portal");
+  return {
+    ok: true,
+    message: `On Wi-Fi: ${parsed.data.onNetworkHours}h. Off-site: ${parsed.data.remoteSessionHours}h.`,
+  };
+}
+
+export async function claimCurrentNetwork(): Promise<ActionResult> {
+  const { staff, error } = await requireManager();
+  if (error || !staff) return error;
+
+  const suggested = suggestCidr(clientIpFromHeaders(headers()) ?? "");
+  if (!suggested) {
+    return {
+      ok: false,
+      message: "Could not see this connection's address. Enter a prefix manually.",
+    };
+  }
+
+  return addNetworkCidr(suggested);
+}
+
+export async function addNetworkCidr(raw: string): Promise<ActionResult> {
+  const { staff, error } = await requireManager();
+  if (error || !staff) return error;
+
+  const cidr = canonicalCidr(raw);
+  if (!cidr) {
+    return {
+      ok: false,
+      message:
+        "That prefix is not usable. IPv4 must be /8–/32 (not 0.0.0.0); IPv6 /32–/128.",
+    };
+  }
+
+  const supabase = createServerSupabase();
+  const { data: tenant, error: readError } = await supabase
+    .from("tenants")
+    .select("network_cidrs")
+    .eq("id", staff.tenantId)
+    .maybeSingle();
+
+  if (readError || !tenant) {
+    return { ok: false, message: "Could not load the current network list." };
+  }
+
+  const current = tenant.network_cidrs ?? [];
+  if (current.length >= 16) {
+    return { ok: false, message: "A resort may register at most 16 prefixes." };
+  }
+  if (current.includes(cidr)) {
+    return { ok: true, message: `${cidr} is already registered.` };
+  }
+
+  const { error: writeError } = await supabase
+    .from("tenants")
+    .update({ network_cidrs: [...current, cidr] })
+    .eq("id", staff.tenantId);
+
+  if (writeError) {
+    return { ok: false, message: `Could not register the prefix: ${writeError.message}` };
+  }
+
+  revalidatePath("/hotel-portal");
+  return {
+    ok: true,
+    message: `${cidr} now admits guest and hall screens without a code.`,
+  };
+}
+
+export async function addNetworkCidrFromForm(formData: FormData): Promise<ActionResult> {
+  const raw = String(formData.get("cidr") ?? "");
+  return addNetworkCidr(raw);
+}
+
+export async function removeNetworkCidr(cidr: string): Promise<ActionResult> {
+  const { staff, error } = await requireManager();
+  if (error || !staff) return error;
+
+  const supabase = createServerSupabase();
+  const { data: tenant, error: readError } = await supabase
+    .from("tenants")
+    .select("network_cidrs")
+    .eq("id", staff.tenantId)
+    .maybeSingle();
+
+  if (readError || !tenant) {
+    return { ok: false, message: "Could not load the current network list." };
+  }
+
+  const next = (tenant.network_cidrs ?? []).filter((entry) => entry !== cidr);
+  const { error: writeError } = await supabase
+    .from("tenants")
+    .update({ network_cidrs: next })
+    .eq("id", staff.tenantId);
+
+  if (writeError) {
+    return { ok: false, message: `Could not remove the prefix: ${writeError.message}` };
+  }
+
+  revalidatePath("/hotel-portal");
+  return { ok: true, message: `${cidr} no longer admits without a code.` };
+}
+
+const remotePassSchema = z.object({
+  tier: z.enum(["guest", "lobby"]),
+  label: z.string().trim().max(80).optional(),
+});
+
+export async function issueRemotePass(formData: FormData): Promise<ActionResult> {
+  const { staff, error } = await requireManager();
+  if (error || !staff) return error;
+
+  const parsed = remotePassSchema.safeParse({
+    tier: formData.get("tier"),
+    label: formData.get("label") || undefined,
+  });
+  if (!parsed.success) {
+    return { ok: false, message: "Choose guest view or hall display." };
+  }
+
+  const supabase = createServerSupabase();
+  const { data: tenant, error: readError } = await supabase
+    .from("tenants")
+    .select("remote_session_hours")
+    .eq("id", staff.tenantId)
+    .maybeSingle();
+
+  if (readError || !tenant) {
+    return { ok: false, message: "Could not load remote session hours." };
+  }
+
+  const { raw, hash } = await generateRemotePassToken();
+  const expiresAt = new Date(
+    Date.now() + tenant.remote_session_hours * 60 * 60 * 1000
+  ).toISOString();
+
+  const { error: writeError } = await supabase.from("remote_access_passes").insert({
+    tenant_id: staff.tenantId,
+    tier: parsed.data.tier,
+    token_hash: hash,
+    label: parsed.data.label || null,
+    expires_at: expiresAt,
+    created_by: staff.userId,
+  });
+
+  if (writeError) {
+    return { ok: false, message: `Could not issue the pass: ${writeError.message}` };
+  }
+
+  const path = parsed.data.tier === "guest" ? "/client/login" : "/lobby/pair";
+  revalidatePath("/hotel-portal");
+  return {
+    ok: true,
+    message: "Copy this link now — it cannot be shown again.",
+    remoteUrl: `${requestOrigin()}${path}?pass=${raw}`,
+    remoteExpiresAt: expiresAt,
+  };
+}
+
+export async function revokeRemotePass(passId: string): Promise<ActionResult> {
+  const { staff, error } = await requireManager();
+  if (error || !staff) return error;
+
+  const parsed = z.string().uuid().safeParse(passId);
+  if (!parsed.success) return { ok: false, message: "Invalid pass." };
+
+  const supabase = createServerSupabase();
+  const { error: writeError } = await supabase
+    .from("remote_access_passes")
+    .update({ revoked_at: new Date().toISOString() })
+    .eq("id", parsed.data)
+    .eq("tenant_id", staff.tenantId);
+
+  if (writeError) {
+    return { ok: false, message: `Could not revoke the pass: ${writeError.message}` };
+  }
+
+  revalidatePath("/hotel-portal");
+  return { ok: true, message: "Remote link revoked." };
 }

@@ -394,6 +394,25 @@ export function normalizeLobbyCode(input: string): string | null {
 }
 
 /**
+ * Mint a readable kiosk code for a resort.
+ *
+ * The alphabet omits glyphs that are misheard or misread when a code is
+ * dictated to whoever is standing at the display: O/0, I/1/L, S/5, B/8, Z/2.
+ */
+export function generateLobbyCode(slug: string): string {
+  const alphabet = "ACDEFGHJKLMNPQRTUVWXY34679";
+  const bytes = new Uint8Array(6);
+  crypto.getRandomValues(bytes);
+
+  const suffix = Array.from(bytes)
+    .map((byte) => alphabet[byte % alphabet.length])
+    .join("");
+
+  const prefix = slug.replace(/[^a-z0-9]/g, "").slice(0, 6).toUpperCase();
+  return `${prefix || "LOBBY"}-${suffix}`;
+}
+
+/**
  * Total 4-digit PINs, and therefore the hard ceiling on concurrently live
  * codes across the entire platform.
  *
@@ -428,5 +447,5 @@ export function describePolicy(
     const overlap = policy.validityDays - CADENCE_DAYS;
     return `New PIN every ${CADENCE_DAYS} days, valid ${policy.validityDays} days, ${overlap}-day overlap.`;
   }
-  return `New PIN each calendar month, valid ${policy.validityDays} days, overlap varies 11–14 days with month length.`;
+    return `New PIN each calendar month, valid ${policy.validityDays} days, overlap varies 11-14 days with month length.`;
 }

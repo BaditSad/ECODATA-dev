@@ -39,13 +39,15 @@ export default async function GuestViewPage() {
 
   const detections: GuestDetection[] = view.detections.map((card) => ({
     detectionId: card.detectionId,
-    speciesName: card.profile?.common_name_en ?? card.speciesName,
+    speciesNameEn: card.profile?.common_name_en ?? card.speciesName,
+    speciesNameFr: card.profile?.common_name_fr ?? card.speciesName,
     latinName: card.latinName ?? card.profile?.latin_name ?? null,
     detectedAt: card.detectedAt,
     sensorName: card.sensorName,
     audioUrl: card.audioUrl,
     spectrogramUrl: card.spectrogramUrl,
-    description: card.profile?.description_en ?? null,
+    descriptionEn: card.profile?.description_en ?? null,
+    descriptionFr: card.profile?.description_fr ?? null,
     imageUrl: card.profile?.image_url ?? null,
     category: card.profile?.category ?? null,
     iucnStatus: card.profile?.iucn_status ?? null,

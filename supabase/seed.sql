@@ -1,0 +1,2 @@
+-- Local seed placeholder. Auth users are created via the sign-in flow;
+-- admin@ecodatalink.com is promoted to super_admin by handle_new_auth_user().

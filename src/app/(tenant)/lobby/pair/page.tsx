@@ -1,32 +1,20 @@
 import type { Metadata } from "next";
-import { LobbyPairForm } from "@/components/lobby/LobbyPairForm";
+import { LobbyPairScreen } from "@/components/lobby/LobbyPairScreen";
 
 export const metadata: Metadata = { title: "Pair display" };
+export const dynamic = "force-dynamic";
 
 /**
- * One-time display pairing.
+ * Hall display pairing.
  *
- * Seen once per screen, by staff, at installation. Afterwards the display holds
- * a year-long session so nobody has to retype anything; rotating the resort's
- * lobby code from the portal is what unpairs a screen.
+ * A screen on the hotel Wi-Fi is admitted without the lobby code. Off-site
+ * pairing (a temporary kiosk, a demo) uses the code or a time-limited link,
+ * and that session is not kept alive.
  */
-export default function LobbyPairPage() {
-  return (
-    <main className="flex min-h-[100svh] flex-col items-center justify-center bg-canopy-950 px-6 py-12">
-      <div className="w-full max-w-[24rem]">
-        <p className="hud-eyebrow">Eco-Data Link display</p>
-        <h1 className="mt-3 font-sans text-[1.6rem] font-light leading-tight tracking-[-0.03em] text-sand-100">
-          Pair this screen
-        </h1>
-        <p className="mt-2 hud-body">
-          Enter the resort&apos;s permanent lobby code. This screen will stay
-          paired until the code is rotated, so this is a one-time step.
-        </p>
-
-        <div className="mt-7">
-          <LobbyPairForm />
-        </div>
-      </div>
-    </main>
-  );
+export default function LobbyPairPage({
+  searchParams,
+}: {
+  searchParams: { pass?: string };
+}) {
+  return <LobbyPairScreen pass={searchParams.pass} />;
 }

@@ -1,56 +1,101 @@
-import type { SensorStatus, SubscriptionStatus } from "@/types/database";
+import type {
+  BillingCycle,
+  ContractStatus,
+  IncidentStatus,
+  InvoiceStatus,
+  SensorStatus,
+  SubscriptionStatus,
+  TicketDepartment,
+  TicketPriority,
+  TicketStatus,
+  TicketBoardColumn,
+} from "@/types/database";
 import type { Tone } from "@/components/console/ui";
+import { DEFAULT_LOCALE, dateLocale, type Locale } from "@/i18n/types";
+import { fill } from "@/i18n/console";
 
 /**
  * Formatting and domain-state helpers shared by both consoles.
  *
- * Everything here is deterministic and locale-fixed to `en-GB`. Server-rendered
- * timestamps formatted with the *server's* locale would differ from the
- * client's on rehydration, which React reports as a hydration mismatch.
+ * Timestamps use the active UI locale with a fixed UTC zone so a server render
+ * and its client counterpart stay in lockstep.
  */
 
-const LOCALE = "en-GB";
+type DatePack = {
+  dateTime: Intl.DateTimeFormat;
+  dateOnly: Intl.DateTimeFormat;
+  timeOnly: Intl.DateTimeFormat;
+  number: Intl.NumberFormat;
+};
 
-const dateTime = new Intl.DateTimeFormat(LOCALE, {
-  day: "2-digit",
-  month: "short",
-  year: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-  timeZone: "UTC",
-});
+const datePacks = new Map<Locale, DatePack>();
 
-const dateOnly = new Intl.DateTimeFormat(LOCALE, {
-  day: "2-digit",
-  month: "short",
-  year: "numeric",
-  timeZone: "UTC",
-});
-
-const timeOnly = new Intl.DateTimeFormat(LOCALE, {
-  hour: "2-digit",
-  minute: "2-digit",
-  timeZone: "UTC",
-});
-
-export function formatDateTime(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  const date = new Date(iso);
-  if (!Number.isFinite(date.getTime())) return "—";
-  return `${dateTime.format(date)} UTC`;
+function datePack(locale: Locale = DEFAULT_LOCALE): DatePack {
+  const cached = datePacks.get(locale);
+  if (cached) return cached;
+  const tag = dateLocale(locale);
+  const pack: DatePack = {
+    dateTime: new Intl.DateTimeFormat(tag, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "UTC",
+    }),
+    dateOnly: new Intl.DateTimeFormat(tag, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      timeZone: "UTC",
+    }),
+    timeOnly: new Intl.DateTimeFormat(tag, {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "UTC",
+    }),
+    number: new Intl.NumberFormat(tag),
+  };
+  datePacks.set(locale, pack);
+  return pack;
 }
 
-export function formatDate(iso: string | null | undefined): string {
-  if (!iso) return "—";
+export function formatDateTime(
+  iso: string | null | undefined,
+  locale: Locale = DEFAULT_LOCALE
+): string {
+  if (!iso) return "-";
   const date = new Date(iso);
-  return Number.isFinite(date.getTime()) ? dateOnly.format(date) : "—";
+  if (!Number.isFinite(date.getTime())) return "-";
+  return `${datePack(locale).dateTime.format(date)} UTC`;
 }
 
-export function formatTime(iso: string | null | undefined): string {
-  if (!iso) return "—";
+export function formatDate(
+  iso: string | null | undefined,
+  locale: Locale = DEFAULT_LOCALE
+): string {
+  if (!iso) return "-";
   const date = new Date(iso);
-  return Number.isFinite(date.getTime()) ? timeOnly.format(date) : "—";
+  return Number.isFinite(date.getTime()) ? datePack(locale).dateOnly.format(date) : "-";
 }
+
+export function formatTime(
+  iso: string | null | undefined,
+  locale: Locale = DEFAULT_LOCALE
+): string {
+  if (!iso) return "-";
+  const date = new Date(iso);
+  return Number.isFinite(date.getTime()) ? datePack(locale).timeOnly.format(date) : "-";
+}
+
+export type RelativeCopy = {
+  never: string;
+  justNow: string;
+  minutesAgo: string;
+  hoursAgo: string;
+  yesterday: string;
+  daysAgo: string;
+};
 
 /**
  * Coarse relative time, computed against an explicit `now`.
@@ -60,42 +105,76 @@ export function formatTime(iso: string | null | undefined): string {
  */
 export function formatRelative(
   iso: string | null | undefined,
-  now: number
+  now: number,
+  copy?: RelativeCopy
 ): string {
-  if (!iso) return "never";
+  const relative: RelativeCopy = copy ?? {
+    never: "jamais",
+    justNow: "à l’instant",
+    minutesAgo: "il y a {n} min",
+    hoursAgo: "il y a {n} h",
+    yesterday: "hier",
+    daysAgo: "il y a {n} j",
+  };
+  if (!iso) return relative.never;
   const then = new Date(iso).getTime();
-  if (!Number.isFinite(then)) return "never";
+  if (!Number.isFinite(then)) return relative.never;
 
   const seconds = Math.round((now - then) / 1000);
-  if (seconds < 0) return "just now";
-  if (seconds < 60) return "just now";
+  if (seconds < 0) return relative.justNow;
+  if (seconds < 60) return relative.justNow;
 
   const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes} min ago`;
+  if (minutes < 60) return fill(relative.minutesAgo, { n: minutes });
 
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours} h ago`;
+  if (hours < 24) return fill(relative.hoursAgo, { n: hours });
 
   const days = Math.round(hours / 24);
-  return days === 1 ? "yesterday" : `${days} days ago`;
+  return days === 1 ? relative.yesterday : fill(relative.daysAgo, { n: days });
 }
 
 export function formatPercent(
   value: number | null | undefined,
   digits = 0
 ): string {
-  if (value === null || value === undefined || !Number.isFinite(value)) return "—";
+  if (value === null || value === undefined || !Number.isFinite(value)) return "-";
   return `${(value * 100).toFixed(digits)}%`;
 }
 
 export function formatNumber(value: number | null | undefined): string {
-  if (value === null || value === undefined || !Number.isFinite(value)) return "—";
-  return new Intl.NumberFormat(LOCALE).format(value);
+  if (value === null || value === undefined || !Number.isFinite(value)) return "-";
+  return new Intl.NumberFormat(dateLocale(DEFAULT_LOCALE)).format(value);
+}
+
+/** Integer cents → a currency string. The ERP stores money as cents. */
+export function formatMoney(
+  cents: number | null | undefined,
+  currency = "EUR"
+): string {
+  if (cents === null || cents === undefined || !Number.isFinite(cents)) return "-";
+  return new Intl.NumberFormat(dateLocale(DEFAULT_LOCALE), {
+    style: "currency",
+    currency,
+  }).format(cents / 100);
+}
+
+/** Form input in euros (comma or dot) → integer cents, or null if unusable. */
+export function parseEurosToCents(raw: unknown): number | null {
+  const n = Number(String(raw ?? "").trim().replace(",", "."));
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.round(n * 100);
+}
+
+/** Whole calendar days from `fromIso` to `toIso`. Negative means already past. */
+export function daysUntil(toIso: string, from = Date.now()): number {
+  const target = new Date(`${toIso}T00:00:00Z`).getTime();
+  return Math.round((target - from) / 86_400_000);
 }
 
 export function formatBytes(value: number | null | undefined): string {
   if (value === null || value === undefined || !Number.isFinite(value) || value < 0) {
-    return "—";
+    return "-";
   }
   if (value === 0) return "0 B";
 
@@ -109,7 +188,7 @@ export function formatBytes(value: number | null | undefined): string {
 }
 
 export function formatDuration(ms: number | null | undefined): string {
-  if (ms === null || ms === undefined || !Number.isFinite(ms) || ms < 0) return "—";
+  if (ms === null || ms === undefined || !Number.isFinite(ms) || ms < 0) return "-";
   const totalSeconds = Math.round(ms / 1000);
   if (totalSeconds < 60) return `${totalSeconds}s`;
   const minutes = Math.floor(totalSeconds / 60);
@@ -218,3 +297,174 @@ export function confidenceTone(score: number): Tone {
   if (score >= 0.7) return "attention";
   return "critical";
 }
+
+export const BILLING_CYCLE_LABEL: Record<BillingCycle, string> = {
+  monthly: "Monthly",
+  quarterly: "Quarterly",
+  yearly: "Yearly",
+};
+
+export const CONTRACT_STATUS_LABEL: Record<ContractStatus, string> = {
+  draft: "Draft",
+  active: "Active",
+  ended: "Ended",
+  cancelled: "Cancelled",
+};
+
+export function contractStatusTone(status: ContractStatus): Tone {
+  switch (status) {
+    case "active":
+      return "positive";
+    case "draft":
+      return "neutral";
+    case "ended":
+      return "attention";
+    case "cancelled":
+      return "critical";
+  }
+}
+
+export const INVOICE_STATUS_LABEL: Record<InvoiceStatus, string> = {
+  draft: "Draft",
+  issued: "Issued",
+  paid: "Paid",
+  void: "Void",
+};
+
+export function invoiceStatusTone(
+  status: InvoiceStatus,
+  dueOn: string,
+  now = Date.now()
+): Tone {
+  if (status === "paid") return "positive";
+  if (status === "void" || status === "draft") return "neutral";
+  return new Date(`${dueOn}T00:00:00Z`).getTime() < now ? "critical" : "attention";
+}
+
+export function invoiceDisplayStatus(
+  status: InvoiceStatus,
+  dueOn: string,
+  now = Date.now()
+): string {
+  if (status === "issued" && new Date(`${dueOn}T00:00:00Z`).getTime() < now) {
+    return "Overdue";
+  }
+  return INVOICE_STATUS_LABEL[status];
+}
+
+export const TICKET_BOARD_COLUMNS: readonly TicketBoardColumn[] = [
+  "draft",
+  "waiting",
+  "in_progress",
+  "done",
+];
+
+export const TICKET_STATUS_LABEL: Record<TicketStatus, string> = {
+  draft: "Draft",
+  waiting: "Waiting",
+  in_progress: "In progress",
+  done: "Done",
+  archived: "Archived",
+};
+
+export const TICKET_COLUMN_COLOR: Record<
+  TicketBoardColumn,
+  { fg: string; soft: string; line: string }
+> = {
+  draft: {
+    fg: "var(--edl-muted)",
+    soft: "var(--edl-soft)",
+    line: "var(--edl-border-strong)",
+  },
+  waiting: {
+    fg: "var(--edl-gold)",
+    soft: "var(--edl-gold-10)",
+    line: "var(--edl-gold-40)",
+  },
+  in_progress: {
+    fg: "var(--edl-sky)",
+    soft: "var(--edl-sky-10)",
+    line: "var(--edl-sky-40)",
+  },
+  done: {
+    fg: "var(--edl-emerald)",
+    soft: "var(--edl-emerald-10)",
+    line: "var(--edl-emerald-30)",
+  },
+};
+
+export const INCIDENT_STATUS_LABEL: Record<IncidentStatus, string> = {
+  open: "Open",
+  in_progress: "In progress",
+  resolved: "Resolved",
+  closed: "Closed",
+  suspended: "Suspended",
+  archived: "Archived",
+};
+
+export function ticketStatusTone(status: TicketStatus): Tone {
+  switch (status) {
+    case "draft":
+      return "neutral";
+    case "waiting":
+      return "attention";
+    case "in_progress":
+      return "neutral";
+    case "done":
+      return "positive";
+    case "archived":
+      return "neutral";
+  }
+}
+
+export function incidentStatusTone(status: IncidentStatus): Tone {
+  switch (status) {
+    case "open":
+      return "attention";
+    case "in_progress":
+      return "neutral";
+    case "resolved":
+      return "positive";
+    case "closed":
+      return "neutral";
+    case "suspended":
+      return "attention";
+    case "archived":
+      return "neutral";
+  }
+}
+
+export const TICKET_PRIORITY_LABEL: Record<TicketPriority, string> = {
+  low: "Low",
+  normal: "Normal",
+  high: "High",
+  urgent: "Urgent",
+};
+
+export function ticketPriorityTone(priority: TicketPriority): Tone {
+  switch (priority) {
+    case "low":
+      return "neutral";
+    case "normal":
+      return "positive";
+    case "high":
+      return "attention";
+    case "urgent":
+      return "critical";
+  }
+}
+
+export const TICKET_DEPARTMENT_LABEL: Record<TicketDepartment, string> = {
+  it: "IT",
+  commerce: "Commerce",
+  marketing: "Marketing",
+};
+
+export const TICKET_DEPARTMENT_COLOR: Record<
+  TicketDepartment,
+  { fg: string; soft: string }
+> = {
+  it: { fg: "var(--edl-sky)", soft: "var(--edl-sky-10)" },
+  commerce: { fg: "var(--edl-gold)", soft: "var(--edl-gold-10)" },
+  marketing: { fg: "var(--edl-violet)", soft: "var(--edl-violet-10)" },
+};

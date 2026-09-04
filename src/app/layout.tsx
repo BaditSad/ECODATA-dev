@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { AppProviders } from "@/components/AppProviders";
+import { currentLocale } from "@/i18n/server";
 import "./globals.css";
 
 const inter = Inter({
@@ -35,13 +37,15 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const locale = currentLocale();
+
   return (
-    <html lang="en" className="dark">
+    <html lang={locale} className="dark">
       <body className={`${inter.variable} ${mono.variable} font-sans`}>
-        {children}
+        <AppProviders initialLocale={locale}>{children}</AppProviders>
       </body>
     </html>
   );

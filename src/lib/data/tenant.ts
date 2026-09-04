@@ -4,6 +4,7 @@ import { createReadOnlyServerSupabase } from "@/lib/supabase/server";
 import type {
   AudioDetectionRow,
   LobbyDisplaySettingsRow,
+  RemoteAccessPassRow,
   SensorBaliseRow,
   SpeciesProfileRow,
   TenantAccessCodeRow,
@@ -28,6 +29,7 @@ export interface PortalSnapshot {
   sensors: SensorBaliseRow[];
   recentDetections: AudioDetectionRow[];
   activeCodes: TenantAccessCodeRow[];
+  remotePasses: RemoteAccessPassRow[];
   lobbySettings: LobbyDisplaySettingsRow | null;
   featuredSpecies: SpeciesProfileRow | null;
 }
@@ -38,7 +40,7 @@ export async function fetchPortalSnapshot(
   const supabase = createReadOnlyServerSupabase();
   const nowIso = new Date().toISOString();
 
-  const [tenant, fleet, rollup, sensors, detections, codes, lobby] =
+  const [tenant, fleet, rollup, sensors, detections, codes, passes, lobby] =
     await Promise.all([
       supabase.from("tenants").select("*").eq("id", tenantId).maybeSingle(),
       supabase
@@ -72,6 +74,13 @@ export async function fetchPortalSnapshot(
         .gte("valid_until", nowIso)
         .order("valid_from", { ascending: true }),
       supabase
+        .from("remote_access_passes")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .is("revoked_at", null)
+        .gt("expires_at", nowIso)
+        .order("expires_at", { ascending: false }),
+      supabase
         .from("lobby_display_settings")
         .select("*")
         .eq("tenant_id", tenantId)
@@ -83,6 +92,7 @@ export async function fetchPortalSnapshot(
   if (sensors.error) throw new Error(`Sensor list failed: ${sensors.error.message}`);
   if (detections.error) throw new Error(`Detection feed failed: ${detections.error.message}`);
   if (codes.error) throw new Error(`Access code list failed: ${codes.error.message}`);
+  if (passes.error) throw new Error(`Remote pass list failed: ${passes.error.message}`);
 
   // The rollup views legitimately return nothing for a resort with no
   // detections yet, so a missing row is not an error.
@@ -105,6 +115,7 @@ export async function fetchPortalSnapshot(
     sensors: sensors.data ?? [],
     recentDetections: detections.data ?? [],
     activeCodes: codes.data ?? [],
+    remotePasses: passes.data ?? [],
     lobbySettings: lobby.data ?? null,
     featuredSpecies,
   };

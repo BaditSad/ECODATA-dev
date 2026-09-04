@@ -1,14 +1,17 @@
 import "server-only";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createReadOnlyServerSupabase } from "@/lib/supabase/server";
+import { clientIpFromHeaders } from "@/lib/auth/client-ip";
 import {
   GUEST_COOKIE,
   LOBBY_COOKIE,
+  sessionAllowedFromIp,
   verifySession,
   type SessionPayload,
 } from "@/lib/auth/session";
+import { isPlatformRole } from "@/lib/auth/roles";
 import type { ProfileRow, StaffRole } from "@/types/database";
 
 /**
@@ -26,7 +29,7 @@ export interface StaffSession {
   email: string;
   fullName: string | null;
   role: StaffRole;
-  /** Non-null for every role except `super_admin`. */
+  /** Non-null for resort roles; always null for platform roles. */
   tenantId: string | null;
 }
 
@@ -65,11 +68,18 @@ async function loadStaffSession(): Promise<StaffSession | null> {
   };
 }
 
-/** Platform operator only. Redirects rather than throwing, so layouts stay simple. */
+/**
+ * Platform operator only.
+ *
+ * Module-scoped ERP work goes through `requireModule()` in `lib/auth/erp.ts`;
+ * this stays for the few operations the owner alone performs.
+ */
 export async function requireSuperAdmin(): Promise<StaffSession> {
   const session = await loadStaffSession();
   if (!session) redirect("/sign-in?from=/admin");
-  if (session.role !== "super_admin") redirect("/hotel-portal");
+  if (session.role !== "super_admin") {
+    redirect(isPlatformRole(session.role) ? "/admin" : "/hotel-portal");
+  }
   return session;
 }
 
@@ -77,7 +87,7 @@ export async function requireSuperAdmin(): Promise<StaffSession> {
 export async function requireStaff(): Promise<TenantStaffSession> {
   const session = await loadStaffSession();
   if (!session) redirect("/sign-in?from=/hotel-portal");
-  if (session.role === "super_admin") redirect("/admin");
+  if (isPlatformRole(session.role)) redirect("/admin");
   if (!session.tenantId) redirect("/sign-in");
   return session as TenantStaffSession;
 }
@@ -91,6 +101,9 @@ export async function requireGuestSession(): Promise<SessionPayload> {
   const token = cookies().get(GUEST_COOKIE)?.value;
   const session = await verifySession(token, "guest");
   if (!session) redirect("/client/login");
+  if (!sessionAllowedFromIp(session, clientIpFromHeaders(headers()))) {
+    redirect("/client/login");
+  }
   return session;
 }
 
@@ -98,6 +111,9 @@ export async function requireLobbySession(): Promise<SessionPayload> {
   const token = cookies().get(LOBBY_COOKIE)?.value;
   const session = await verifySession(token, "lobby");
   if (!session) redirect("/lobby/pair");
+  if (!sessionAllowedFromIp(session, clientIpFromHeaders(headers()))) {
+    redirect("/lobby/pair");
+  }
   return session;
 }
 
